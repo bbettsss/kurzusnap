@@ -1,0 +1,62 @@
+---
+title: "betts_hf1_proba"
+author: "betts"
+date: "2024-09-18"
+output: html_document
+---
+
+# 2024.szeptember 18. - Ökonometria házi feladat 1. - hotels - ?
+
+1. Mappa behívása és a megfelelő packagek csatolása
+```{r}
+setwd("~/Documents/Documents - betts’s MacBook Air/rajk/kurzusok/2.félév/ökonometria/hf - 1")
+
+library(tidyverse)
+```
+
+2. Az adatok betöltése/becsatolása
+```{r}
+hotels_data <- read_csv("hotelbookingdata.csv")
+```
+
+```{r}
+distinct_ids <- hotels_data %>% select(hotel_id) %>% distinct 
+sum(duplicated(hotels_data$hotel_id))
+```
+
+```{r}
+unique(hotels_data$addresscountryname)
+```
+
+```{r}
+country_filter <- hotels_data %>% filter(addresscountryname == "Germany")
+```
+
+```{r}
+unique(country_filter$city_actual)
+```
+
+```{r}
+city_filter <-  country_filter %>% filter(city_actual == "Berlin")
+```
+
+
+```{r}
+length(city_filter$addresscountryname)
+```
+
+```{r}
+summarized <- city_filter %>% 
+  group_by(hotel_id) %>% 
+  summarise(across(everything(), first))
+```
+
+```{r}
+summary(summarized %>% select(rating_reviewcount, price, starrating, accommodationtype, center1distance, guestreviewsrating))
+```
+
+```{r}
+head(summarized$starrating)
+```
+
+

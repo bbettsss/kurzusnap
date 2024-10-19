@@ -1,0 +1,92 @@
+---
+title: "02_ora"
+author: "betts"
+date: "2024-09-24"
+output: html_document
+---
+
+```{r}
+#install.packages("scales")
+#install.packages("xtable")
+#install.packages("modelsummary")
+
+library(tidyverse)
+library(scales)
+library(xtable)
+library(modelsummary)
+```
+
+
+# 2024.09.24. - 2.óra - Feltáró adatelemzés
+
+#### Miért?
+
+1. Ellenőrizzük, hogy tiszta-e az adat - missingek, hibák, ellentmondások
+
+2. Irányok a további elemzéshez - érdemes-e átalakítani a változótípust, eloszlása milyen (kiugró értékek? normális?, mennyire változékony,)
+
+3. Kontextust ad az eredményeknek
+
+4. Maguk az eredmények (pl RTC)
+
+5. Ötletek újabb kérdések a további elemzéshez 
+
+
+```{r}
+setwd("~/Documents/Documents - betts’s MacBook Air/rajk/kurzusok/2.félév/ökonometria/ora - 2")
+
+hotel_data <-  read.csv("hotels-vienna.csv")
+```
+
+
+#### Gyakoriság, valószínűség
+
+- abszolút
+
+- relatív gyakoriság (valószínűség, százalék)
+
+- kvalitatív: minden kategóriára, oszlopdiagram. Nézzük meg a bécsi hoteleknél
+
+- kvantitatív: bin (rekesz), Hisztogramnál jó binszélességet válasszunk
+
+- Kvantitatív változók eloszlásáról képet alkothatunk (ferde? szélsőséges értékek, módusz?)
+
+
+
+#### Szélsőséges értékek kezelése 
+
+- ha hiba, kidobjuk
+
+- egyébként attól függ, hoy milyen szerepet tölt be az elemzésbe. x kidobása átlátható, y kidobása nem
+
+- például: foglalkozás csoportok közötti kereset különbségeket vizsgálunk
+
+
+#### Ábrázolás
+
+- a lényeg
+  - önmagában, a szöveg elolvasása nélkül értelmezhető legyen a megfelelő közönségnek
+    - ehhez: 
+      - cím, 
+      - tengelynevek (mértékegységgel),
+      - tengelycímkék, 
+      - esetleg jelmagyarázat (legend), 
+      - esetleg feliratok,
+      - megjegyzések
+  - Minden szükséges infó legyen rajta, és semmi szükségtelen (pl egy oszlopdiagram oszlopao ne legyenek különböző színűek)
+  - Tankönyv ábráit érdemes nézegetni, kódok fent vannak a megcsinálásukhoz
+
+
+#### Leíró statisztikák kvantitatív változókra (3.5 tábla)
+
+- átlag
+- medián - középső érték
+- módusz - leggyakoribb érték
+
+- terjedelem, interkvartilis terjedelem
+- variancia
+- szórás (Std(x)), gyök variancia
+- z-score
+- ferdeség
+
+

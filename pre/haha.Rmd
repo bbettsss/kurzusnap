@@ -1,0 +1,214 @@
+---
+title: "r_bevezetes"
+author: "betts"
+date: "2024-09-16"
+output: html_document
+---
+
+ha 1 hashtag van akkor főcím lesz, ha 2 akkor alcím és így tovább
+
+# Főcím
+
+## Alcím
+
+Chunkokba lehet írni a kódot, mert amúgy szövegként jelenik meg.
+
+```{r}
+#ez szöveg, ha nincs hashtag akkor kód lesz
+```
+
+## Alapértelmezett mappa beállítása
+
+setworkingdirectory
+
+```{r}
+setwd("/Users/betts.belenyesi/Documents/Documents - betts’s MacBook Air/rajk/kurzusok/2.félév/ökonometria")
+
+#/-re kell cserélni
+```
+
+## Packagek
+
+dplyr: adatmanipulációra fogjuk használni
+
+ggplot2: adatvizualizációra jó
+
+esquisse: megkönnyíti a a ggplot használatot
+
+```{r}
+#install.packages("dplyr")
+#install.packages("ggplot2")
+#install.packages("esquisse")
+
+library(dplyr)
+library(ggplot2)
+library(esquisse)
+
+```
+az install-al packageket lehet hozzáadni az R-hez, viszont utána ha ezeket szeretnénk használni az egyes projekteknél akkor library zárójellel lehet hozázáadni az adott projekthez - ezt oldal a packages alfülnél is meg lehet csinálni csak időigényesebb
+
+
+## Nagyon alap dolgok
+
+```{r}
+print("HelloWorld")
+```
+
+```{r}
+egy <- 1
+kettő <- 2
+
+egy_szoveg <-  "1"
+rm(egy_szoveg)
+```
+
+
+## Adatbázisok betöltése
+
+### CSV
+
+```{r}
+house <- read.csv("house_data.csv")
+```
+
+### excel
+
+```{r}
+#install.packages("readxl")
+library(readxl)
+
+mba <- read_excel("MBA.xlsx")
+```
+
+## Adatbázisok feltérképezése
+
+```{r}
+colnames(house)
+
+str(house)
+```
+```{r}
+str(mba)
+```
+
+
+```{r}
+mba$Gender <- as.factor(mba$Gender)
+str(mba)
+```
+
+```{r}
+#Faktor változóknál: table, plot
+
+table(mba$Gender)
+plot(mba$Gender)
+```
+
+```{r}
+#Numerikus változóknál: mean, hist
+mean(house$House_Price)
+median(house$House_Price)
+hist(house$House_Price)
+```
+
+# Dplyr
+
+- gyakran használjuk majd, adat manipulációra jó
+- pipe operator: Ctrl + Shift + M = %>%
+
+- legfontosabb parancsok:
+  - rename (változó átnevezése),
+  - mutate (új változó kreálása),
+  - filter (változó(k) szerint szűrés),
+  - select (változók kiválasztása),
+  - summarise,
+  -group_by...
+
+```{r}
+#rename-nél: új név = régi név
+house <- house %>% 
+  rename(negyzetmeter = Square_Footage, ar = House_Price)
+```
+
+```{r}
+house <- house %>%
+  mutate(negyzetmeterar = ar/negyzetmeter)
+
+hist(house$negyzetmeterar)
+```
+
+```{r}
+#sűrjünk egy új adatbázisba a 250 négyzetméterár alatti lakásokat
+house_szurt <- house %>%
+  filter(negyzetmeterar<250)
+```
+
+```{r}
+mba_selected <- mba %>% 
+  select(Gender,Result10)
+```
+
+```{r}
+#új adatbázisba mentsük ki, hogy nememnként mekkora az átlagos eredmény (result10)
+# group_by: csoportosításra jó (nem szerint)
+# summarise: a többi változó összetömmörítése
+mba_nemenkent <- mba_selected %>% 
+  group_by(Gender) %>% 
+  summarize(mean(Result10))
+```
+
+```{r}
+#eggyel boncsibb adatbaszkurálás
+mba_selected2 <- mba %>% 
+  select(Gender, Result10, Result12) %>% 
+  group_by(Gender) %>% 
+  summarize(mean(Result10), max(Result12))
+
+```
+
+## Ábra ggplot2-vel
+
+## pontdiagramm az alapterület (nm) és az ár között
+
+```{r}
+ggplot(house) +
+  aes(x = negyzetmeter, y = ar) +
+  geom_point(colour = "blue") +
+  theme_minimal()
+```
+
+### Kicsit extrább pontdiagramm
+
+```{r}
+ggplot(house) +
+  aes(x =negyzetmeter, y = ar) +
+  geom_point(colour = "lightblue") +
+  labs(
+    x = "Alapterület (négyzetméter)",
+    y = "Ár",
+    title = "Alapterület és ár közti kapcsolat"
+  ) +    
+  theme_light() +
+  theme(
+    plot.title = element_text(size = 14L,
+    face = "bold",
+    hjust = 0.5)
+  ) +
+  geom_smooth(method = "lm", colour = "red", size = 0.8)
+```
+
+## Esquisse
+
+```{r}
+#esquisse::esquisser() ezt hol tudom kimásolni?
+```
+
+```{r}
+library(ggplot2)
+
+ggplot(mba) +
+ aes(x = Gender, y = MBA) +
+ geom_boxplot(fill = "#FF761A") +
+ theme_bw()
+```
+

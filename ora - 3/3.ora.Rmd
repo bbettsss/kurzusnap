@@ -1,0 +1,237 @@
+---
+title: "ora -3"
+author: "betts"
+date: "2024-10-01"
+output: html_document
+---
+
+# 2024. október 1. - Ökonometria 3. - Összehasonlítás és korreláció
+
+```{r}
+#mindent kitöröl az environmentemből:
+#rm(list=ls())
+
+#install.packages("viridis")
+#install.packages("viridisLite")
+
+
+setwd("~/Documents/Documents - betts’s MacBook Air/rajk/kurzusok/2.félév/ökonometria/ora - 3")
+
+library(tidyverse)
+library(binsreg)
+library(viridis)
+library(viridisLite)
+library(ggplot2)
+
+
+mexico <- read.csv("wms_da_textbook.csv")
+
+```
+
+### x és y
+
+#### Mi az y és x az adatelemzés?
+
+- y-ról szeretnénk valamit megtudni - kimeneti/fuggő/baloldai változó
+- x-el magyarázzuk az y-t- oksági/független/jobboldali változó
+
+- cél: predikció / oksági elemzés
+  - adat: iskolai végzettség, nem, életkor, mennyi hitlet vett fel, visszafizette-e, mi lehet x és y? 
+    => mi lehet a cél? - predikciós feladat
+  - adat: iskolai végzettség, jövedelem
+    => x -iskolai végzettség, y - jövedelem, --> oksági elemzés (de oda vissza is működőképes)
+
+- a predikciónál nem fontos, hogy intuitívak legyenek a változók
+  - nem fontos hogy mitől változik az y, csak egyfajta predikciót szeretnénk megkapni
+  - nem az a cél, hogy megértsék az emberek viselkedését és annak az okát, csak szeretnék tudni mondjuk két opció körül melyikkel járnak jobban
+  
+  
+  
+### Esettanulmány - új adat - World Management Survey
+
+- vállalatvezetési minőség és a vállalatok mérete
+  - x - vállalatok mérete
+  - y - vállalatvezetési minőség
+  - cél: ????
+- vállalatvezetési mínőség: 18 ordinális változó (pl.: teljesítmény nyomonkövetése, célok időhorizontja), kérdezőbiztos értékeli, egy interjú alapján -> vesszük a 18 változó átlagát és kvanitatív változóvá összegezzük az ordinális változókat
+- mexikót nézzük
+- vállalatméret: alkalmazottak száma
+- nézzük meg a leíró statisztikákat
+
+
+```{r}
+#install.packages("binsreg")
+```
+
+
+
+```{r}
+#leszűkítjük az elemzésünk fókuszát
+
+#x alapján szűkíteni oké, y alapján szűkíteni nem oké
+
+mexico <-  mexico %>% 
+  filter(country == "Mexico" & wave==2013 & emp_firm>=100 & emp_firm<=5000)
+```
+
+
+```{r}
+size_plot <- ggplot(mexico, aes(emp_firm)) +
+  geom_histogram(aes(y=after_stat(count / sum(count))), binwidth = 1, color="black", fill="white") + 
+  labs(x="Vállaltméret (alkalmazottak száma)", y="Relatív gyakoriság")
+
+size_plot
+```
+
+```{r}
+size_plot_ln<-ggplot(mexico, aes(log(emp_firm))) +
+  geom_histogram(aes(y=after_stat(count / sum(count))), binwidth = 0.2, color="black", fill="white") + 
+  labs(x="Vállaltméret (alkalmazottak száma)", y="Relatív gyakoriság") 
+
+size_plot_ln
+```
+
+
+```{r}
+#normélis eloszláshoz hasonlít
+
+man_quality_plot<-ggplot(mexico, aes(management)) +
+  geom_histogram(aes(y=after_stat(count / sum(count))), binwidth = 0.2, color="black", fill="white") + 
+  labs(x="Vállalatvezetési minőség (átlagos pontszám)", y="Relatív gyakoriság") 
+
+
+man_quality_plot
+```
+
+
+### Feltételes összevetés (conditioning)
+
+- mi a feltételes összevetés?
+  - amikor y értékeit vagy statisztikáit x különböző értékei szerint vizsgáljuk
+- további feltételes összevetés? ugyanez z rögzítése mellett
+  - független változó mellett is lehet további feltételes összevetést csinálni
+
+
+### Feltételes valószínűség
+
+- P(esemény1 | esemény2) - változó az adatban bizonyos értékeket vesz fel - rre is gondolhatunk eseményenként
+- inverz feltételes valószínűségek: P(esemény1 | esemény2) = ? P(esemény2 | esemény1)
+  - pl.: véletlen minta magyar lakosságból, esemény 1: családi pótlékot kap, esemény2: nő
+      - ha valaki kap családi pótlékot akkor nagy valószínűségben nő, de egy nő nem feltétlen kap minden esetben családi pótlékot
+- együttes valószínűség: P(esemény1 ÉS esemény2)
+- Független esemény: P(esemény1 | esemény") = P(esemény2)
+  - pl.: feldobunk egy kockát vagy egy érmét
+- esemmény: lehet bináris (példa), de kvantitatív is
+- hogyan tudunk ábrázolni feltételes valószínűségeket ha viszonylag kevés az érték? - R
+  - ???
+  
+
+### Feltételes eloszlás, feltételes várható érték
+
+- Mit jelent y feltételes eloszlása x szerint?
+- Mit jelent a feltételes várható érték?
+
+
+```{r}
+mexico$emp3bins <- ifelse(mexico$emp_firm<200, 1, 
+                      ifelse(mexico$emp_firm>=200 & mexico$emp_firm<1000, 2,
+                             ifelse(mexico$emp_firm>=1000, 3,100)
+                      )
+)
+```
+
+
+```{r}
+mexico$emp3bins <- as.factor(mexico$emp3bins)
+```
+
+```{r}
+mexico1 <- mexico %>% 
+  dplyr::select(emp3bins,lean1) %>% 
+  group_by (emp3bins,lean1) %>% 
+  dplyr::summarise(Count = n()) %>% 
+  mutate(Percent= round(Count / sum(Count),digits = 5)) %>% ungroup()
+
+```
+
+```{r}
+lean_man <- ggplot(data=mexico1, aes(x=emp3bins, y=Percent, fill = factor(lean1, levels = rev(unique(lean1))))) +
+  geom_bar(stat = "identity", position = "fill",width = 0.6,  color = "white",  linewidth = 0.5, alpha = 0.8) +
+  scale_y_continuous(expand=c(0,0), limits=c(0, 1), breaks = seq(0, 1, by = 0.2), labels = scales::percent_format()) +
+  scale_x_discrete(labels=c("1" = "Small", "2" = "Medium", "3" = "Large")) +
+  scale_fill_manual(values = viridis(5, begin=0, end=0.9), name = NULL) +
+  labs(x = "Firm size (employment), 3 bins", y = "Percent") +
+  theme(legend.position = "bottom") + 
+  theme(legend.title=element_blank())
+
+lean_man
+```
+
+```{r}
+g5a<-ggplot(data = mexico, aes(x = emp_firm, y = management)) +
+  geom_point(color = "black", linewidth = 1.5,  shape = 16, alpha = 0.8, show.legend=FALSE, na.rm = TRUE) + 
+  scale_x_continuous(expand = c(0.01,0.01),limits=c(0, 5000), breaks=seq(0, 5000, by=1000)) + 
+  scale_y_continuous(expand = c(0.01,0.01),limits = c(1, 5), breaks = seq(1, 5,1)) +
+  labs(x = "Firm size (employment)",y = "Management score")
+
+g5a
+```
+```{r}
+mexico$lnemp = log(mexico$emp_firm)
+
+g5b<-ggplot(data = mexico, aes(x = lnemp, y = management)) +
+  geom_point(color = "black", linewidth = 1.5,  shape = 16, alpha = 0.8, show.legend=FALSE, na.rm = TRUE) + 
+  scale_x_continuous(expand = c(0.01,0.01),limits=c(4, 9), breaks=seq(4, 9, by=1)) + 
+  scale_y_continuous(expand = c(0.01,0.01),limits = c(1, 5), breaks = seq(1, 5,1)) +
+  labs(x = "Firm size (ln(employment))",y = "Management score") 
+
+g5b
+```
+```{r}
+mexico$emp3bins <- ifelse(mexico$emp3bins == 1 , 150, 
+                      ifelse(mexico$emp3bins == 2, 600,
+                             ifelse(mexico$emp3bins == 3, 3000, NA)))
+```
+
+```{r}
+mexico1<-mexico %>% group_by(emp3bins) %>%
+  dplyr::summarize(management_emp3bins=mean(management))
+```
+
+```{r}
+g4a<-ggplot(data = mexico1, aes(x = emp3bins, y = management_emp3bins)) +
+  geom_point(size = 2, color = "black", fill= "black", shape = 21, alpha = 0.8, na.rm=T) +
+  geom_text(aes(label = round(management_emp3bins, 1)), hjust = 0.5, vjust = -1, color = "black", linewidth = 3) +
+  labs(x = "Firm size (employment), 3 bins", y = "Management score") + 
+  scale_y_continuous(expand = c(0.01,0.01),limits = c(2.4, 3.4), breaks = seq(2.4, 3.4, by=0.2)) +
+  scale_x_continuous(expand = c(0.01,0.01),limits = c(0, 3000), breaks = seq(0,3000, by=500))
+
+g4a
+
+binsreg(mexico$management, mexico$emp_firm, nbins = 10)
+```
+
+```{r}
+cov(mexico$management, mexico$emp_firm)
+cor(mexico$management, mexico$emp_firm)
+```
+
+```{r}
+mexico$industry_broad[mexico$sic<=21] <- 'food_drinks_tobacco'
+mexico$industry_broad[mexico$sic>=22 & mexico$sic<=23 | mexico$sic==31  ] <- 'textile_apparel_leather_etc'
+mexico$industry_broad[mexico$sic>=24& mexico$sic<=27] <- 'wood_furniture_paper'
+mexico$industry_broad[mexico$sic>=28 & mexico$sic<=30] <- 'chemicals_etc'
+mexico$industry_broad[mexico$sic>=32 & mexico$sic<35] <- 'materials_metals'
+mexico$industry_broad[mexico$sic>=35 & mexico$sic<37] <- 'electronics'
+mexico$industry_broad[mexico$sic==37 ] <- 'auto'
+mexico$industry_broad[mexico$sic>=38]             <- 'other'
+```
+
+
+```{r}
+mexico %>%
+  group_by(industry_broad) %>%
+  dplyr::summarize(COR=cor(management, emp_firm))
+
+```
+

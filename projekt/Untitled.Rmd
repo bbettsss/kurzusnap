@@ -1,0 +1,23 @@
+---
+title: "projekt"
+author: "betts"
+date: "2024-10-18"
+output: html_document
+---
+
+```{r}
+
+setwd("~/Documents/Documents - betts’s MacBook Air/rajk/kurzusok/3.félév/ökonometria/projekt") 
+
+#install.packages("readxl")
+
+library(readxl)
+
+drug_data <- read_xlsx("~/Documents/Documents - betts’s MacBook Air/rajk/kurzusok/3.félév/ökonometria/projekt/adatok/GPS-66.xlsx")
+
+mental_data <- read.csv("~/Documents/Documents - betts’s MacBook Air/rajk/kurzusok/3.félév/ökonometria/projekt/adatok/2022_all_mean.csv", sep =  ";", header = TRUE)
+
+school_data <- read_xlsx("~/Documents/Documents - betts’s MacBook Air/rajk/kurzusok/3.félév/ökonometria/projekt/adatok/UDB_countries_2309_version.xlsx")
+
+```
+

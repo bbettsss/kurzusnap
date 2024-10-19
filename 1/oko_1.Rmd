@@ -1,0 +1,175 @@
+---
+title: "oko_1"
+author: "betts"
+date: "2024-09-17"
+output: html_document
+---
+
+#2024.szeptember 16. - Ökonometria 1. 
+
+```{r}
+setwd("~/Documents/Documents - betts’s MacBook Air/rajk/kurzusok/2.félév/ökonometria/1")
+
+install.packages("tidyverse")
+  
+library(tidyverse)
+```
+```{r}
+hotels_df <- read.csv("hotels-vienna.csv")
+```
+
+Keresztmetszeti - cross sectional adat
+
+```{r}
+distinct_ids <- hotels_df %>% select(hotel_id) %>% distinct 
+sum(duplicated(hotels_df$hotel_id))
+
+#jó itt most nem teljesen értem mi történt szóval majd nézd meg pls
+```
+
+## mi az hogy instrument?
+
+## rating változó - átlagosan hány pontot adnak a vendégek egy adott hotelre
+  magas érvényességű változó-e?
+    valszeg nem, mert nem ugyanannyi ember értékelte valszeg a hoteleket és más dolgokat tudnak érteni a különböző értékelés pontok alatt
+## megbízhatóság
+  survey kérdések nem megbízhatóak, főleg ha nem tudják az emberek a választ
+  nem nagy megbízhatósági változó
+
+## csak azok a szállások vannak benne az adatokban amiknek volt szabad szobája
+  nem teljes a lefedettség
+  van benne torzítás -> a legkeresett hotelek valszeg nincsenek a mintába, mivel azoknál nem volt valószínüleg szabad szoba
+  de fontos hogy mi az a kérdés amire válaszolni szeretnénk
+  
+## web scraping
+  fejlesztői eszközök -> html letöltése -> struktúrált adathalmazt csinálni
+  admin adatok/registered data
+  válaszmegtagadás
+  több adatforrás összekapcsolás - nagyon izgalmas tud lenni
+
+## mintavétel
+  populációból/univerzumból
+  reprezentativitás (reprezentativitás nemre, életkorra..)
+  utosúlyozni szokták
+    nem tudomány hanem inkább művészet
+  véletlen mintavétel - de gyakorlatban: válaszhiány
+  minta elemszáma a fontos ( és nem a teljes populáció mérete)
+  
+### hollandia - válaszmegtagadás csökkentésére
+  sokféle ösztönző bevezetése
+  
+## big data
+  volume, variety, velocity, veracity - nem tudjuk a számítógépen tárolni
+  struktúrálatlan adatok
+  rengetek featurerel per változóval rendelkezik
+  sokszor atumatikusan és folyamatosan gyűjtve
+  társadalomtudományban - Rajn Chetty
+  ebből is vehetünk mintát
+  pipeline
+  előnyök, hátrányok
+  
+## jó gyakorlatok
+  kérdezők alapos képzése
+  pilot
+  teszt - újrateszt
+  ösztönzők a válaszmegtagadás csökkentésére
+  csapatban dolgozik
+  
+## etikai és jogi megfontolások
+  adatok bizalmas kezelése - explicit beleegyezés a kérdezettektől az összekötésre
+  anonimizálás - gyakorlatban pl KSH kutatószoba
+  ki az adat tulajdonosa?
+  
+# Az adatok előkészítése
+
+időigényes
+iteratív
+
+## változók típusai
+  kvantitatív
+  kvalitatív
+    tringekkel és számokkal tárolva
+    bináris (indikátor, dummy - ha egy többértékű kvalitatívból csinálunk több bináris változót)
+  nominális, ordinális, intervallumváltozó, arányváltozó
+## stock, flow változók (állományváltozók, folyamatváltozók)
+
+```{r}
+summary(hotels_df %>% select(country, rating_count, price, stars, accommodation_type, distance, rating))
+```
+```{r}
+head(hotels_df$rating)
+```
+
+```{r}
+hotels_df <-  hotels_df %>% mutate(acc_type = as.factor(accommodation_type))
+summary(hotels_df)
+```
+
+## megfigyelések típusai
+  id
+  keresztmetszeti adat - pillanatkép egy populációról
+  idősoros - egy megfigyelés és többszöri adatgyűjtés
+  panel - adott egyéneket követünk és többszöri adatgyűjtés
+
+## tidy data
+  - minden megfigyelés egy sor egy adattáblábam
+  - minden változó egy oszlop egy adattáblában
+  - minden megfigyelési típusra külön adattábla
+    - különböző aggrgáltsági szintekre kell gondolni
+  ezekből csinálunk egy munkafilet
+  panel adatnál bonyolultabb. long formátumban tidy tárolni (ember - idő sorok)
+  munkafile aztán lehet wide is
+  pl. spell szintű adatból érdemes ember-idő panelt
+  
+## adatok összekötése
+  1:1 illesztés - pl.: születési adatbázis, népszámlálás
+  1:m illesztés (m:1) - pl.: employee-employer panel
+
+## entitásfeloldás
+  duplikátumok - fontos kezelni
+    pl.: nem tudunk mérlegelni, ha vannak duplikátumok
+  problémás esetek
+    pl. fenntartóváltás egy sikolában
+    cégeknál összeolvadások
+    ékezetek különböző írásmódok
+    
+## hiányzó értékek vagy missingek kezelése
+  sokszor furcsa számmal kódolva - 99.999 
+    feltétlen missingelni kell - NA
+  mennyi hiányzik? mennyi változón?
+  véletlenszerűen hiányoznak az adatok? benchmarking
+  
+  leggyakrabban csak, akinek minden vátozója megvan
+    sokszor elég lényeges elemszámcsökkennés
+    érdemes lehet explicite kiválasztani egy alcsoportot, ahol nincs missing
+    esetleg kvalitatív változóként, ahol a missing egy kategória
+    imputálás
+    
+    
+```{r}
+hotels_df <-  hotels_df %>% arrange(rating)
+```
+    
+## Adattisztítás folyamata
+  dokumentáljuk
+    sok döntést meg kell hozni, valószínűleg sokszor nincs minden szempontból jó - de mndenképp explicit, reprodukálható kell hogy legyen
+    robusztussági vizsgálat rá - README és hosszabb leírás is
+  értékcímkék (string helyett factor R-ben értelmes lehet)
+  változócímkék
+  2.4 táblázatban szépen össze van szedve
+  
+## adatok rendszerezése
+  KRTK 
+    pl. Do, Input_data, Output_data, Results, Log
+  tároljuk a nyers adatot, és a tisztított, tidy adatot (1-szer)
+  köztes adatbázisokat ne tároljunk, adat- változatokat semmiképp
+    csak a kódot, ami megcsinálja a tidy adatból
+  kommenteljük a kódot - sokszor fontosabb a miért, mint a mi
+  
+# Takeaway
+  ismerjük az adatainkat:
+    tudjuk hogyan keletkeztek, és a kérdésünk megválaszolása blabla
+    
+jövő óra elején teszt, gyakorlókérdések érdemes átnézni, 63.oldal
+
+van hf a slideok végén

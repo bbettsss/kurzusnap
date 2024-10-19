@@ -1,0 +1,13 @@
+---
+title: "Untitled"
+author: "betts"
+date: "2024-09-25"
+output: html_document
+---
+
+```{r}
+rm(list = ls())
+dev.off()  # Bezárja a grafikai eszközt
+
+```
+

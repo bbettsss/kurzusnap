@@ -1,0 +1,202 @@
+---
+title: "oko_hf1"
+author: "betts"
+date: "2024-09-20"
+output: html_document
+---
+
+# 2024.szeptember 20. - Ökönometria házi feladat 1. - hotels - Berlin
+
+
+
+## 0.lépés - Előkészítés
+
+##### Az adatok megtisztításához és rendezéséhez szükséges lépések véghezvitele, mint a fájl hely beállítása, a packagek betöltése, az adatok beolvasása és betöltése.
+
+```{r}
+#1. A setwd paranccsal kijelölöm a mappa helyét, ahonnan el tudom érni az adatfájlokat és ahová el tudom menteni az eredményfájlokat az adattisztítás elvégzése után.
+
+setwd("~/Documents/Documents - betts’s MacBook Air/rajk/kurzusok/2.félév/ökonometria/hf - 1")
+
+
+#2. Különböző packagek betöltése, amik szükségesek lesznek a feladat során, hogy adott parancsokat elő tudjak hívni.
+
+library(tidyverse)
+
+library(naniar)
+
+
+#4 Az adatfájl betöltése R-be amivel dolgozni fogok a feladat során
+
+hotels_data <- read.csv("hotelbookingdata.csv")
+```
+
+
+
+## 1.lépés - Szűrés
+
+
+##### Az adatok szűrése kifejezetten a Berlini hoteleket célozva
+
+```{r}
+#1. Az adatok leszűréséhez a "filter" parancsot használtam, amely a hotels_data adattáblából leszűri azokat az adatsorokat, amelyek kifejezetten a Berlin-i hotelekre vonatkoznak. Ezeknek az adatoknak létrehoztam egy új adattáblát - filtered_data néven.
+
+filtered_data <- hotels_data %>% 
+  filter(city_actual == "Berlin")
+```
+
+
+##### Az egyszerűbb értelmezés érdekében azokat az oszlopneveket átneveztem, amik nem voltak eléggé egyértelműek.
+
+```{r}
+#1. Ahhoz, hogy lássam az összes oszlopnevet és eldöntsem melyeket kéne átnevezzem, hogy logikusabb legyen számomra az elnevezés, a "colnames" paranccsal összegyűjtöm őket.
+
+colnames(filtered_data)
+```
+
+
+```{r}
+#2. Számomra nem volt egyértelmű 3 oszlopnak az elnevezése, így a center1distance & center2label & center2distance oszlopokat átnevezetem, citicenter_distance & sightname & sight_distance nevű oszlopokra.
+
+filtered_data <- filtered_data %>% mutate(citycenter_distance = as.factor(center1distance))
+filtered_data<- filtered_data %>% mutate(sightname = as.factor(center2label))
+filtered_data <- filtered_data %>% mutate(sight_distance = as.factor(center2distance))
+```
+
+
+
+## 2.lépés - Egyszerűsítés
+
+
+##### 27 oszlopom van, ezért megnézem, hogy az egyes oszlopok mit vizsgálnak. És a feltevésem az, hogy a city_actual és a s_city nevű oszlopban ugyanolyan értékek vannak.
+
+```{r}
+#1. Létrehozok egy olyan adattáblát, amelyben csak a city_actual és s_city oszlopok szerepelnek, hogy megpróbáljam bebizonyítani a hipotézisem. Az oszlopok kiemelését a "select" paranccsal fogom véghezvinni.
+
+hypothesis <- filtered_data %>% 
+  select(city_actual, s_city)
+```
+
+
+
+```{r}
+#2. Az "identical" paranncsal megnézem, hogy a két oszlopomban megegyeznek-e az értékek és azonos sorrendben vannak-e. Ha lefuttatás után "TRUE" értéket kapok, akkor a két tábla megegyezik egymással.
+
+identical(hypothesis$city_actual, hypothesis$s_city)
+
+
+#3. Ha "FALSE" értéket kaptam volna, akkor "which" paranccsal meg tudtam volna nézni, hogy mely értékek nem egyeznek. De mivel megegyezett a két oszlop, ezért most ezt a parancsot nem hajtom végre.
+
+#elteres <- which(hypothesis$city_actual != hypothesis$s_city)
+#print(elteres)
+```
+
+##### Számomra az oszlopok sorrendje kevésbé logikus, ezért úgy próbálom elhelyezni, hogy az összetartozó változók egymás mellé kerüljenek. 
+
+Ezen felül kiveszem a s_city nevű változót, mivel az előző pontban bebizonyyítottam, hogy megegyezik a city_actual változóval, így nem ad plusz információt az adatainkhoz. És center1label nevű változót is kiveszem, mivel átneveztem a center1distance változót citycenter_distance-re, ami összevonja a két oszlopot intuitívan. A változások miatt létrehozok egy új adattáblát, aminek az aggregated_data nevet adtam.
+
+```{r}
+#3. A "select" paranccsal kiválasztom azokat az oszlopokat, amelyek szükségesek és új sorrendbe rakom őket.
+
+aggregated_data <- filtered_data %>% 
+  select(addresscountryname, city_actual, neighbourhood, hotel_id, price, price_night, accommodationtype, citycenter_distance, sightname, sight_distance, offer, starrating, guestreviewsrating, rating_reviewcount, rating2_ta, rating2_ta_reviewcount, scarce_room, offer, offer_cat, year, month, weekend, holiday)
+```
+
+
+##### A nem intuitív változó/oszlopnevek egyszerűsítése a könnyebb adatértelmezés érdekében.
+
+```{r}
+#4. Az adatok vizsgálata közben kijött, hogy az accommodationtype oszlop változó értékeinek elnevezése nem rögtön egyértelmű, így a "unique" paranccsal összegyűjtöm az összes változót az oszlopban, hogy könnyebben át tudjam nevezni őket.
+
+accommodationtype <- unique(aggregated_data$accommodationtype)
+print(accommodationtype)
+```
+
+
+```{r}
+#5. A 7 változómat leegyszerűsítés miatt "recode" paranccsal átnevezem.
+
+aggregated_data$accommodationtype <- recode(aggregated_data$accommodationtype,
+                                 "_ACCOM_TYPE@Hotel" = "Hotel",
+                                 "_ACCOM_TYPE@Apart-hotel" = "Apart-hotel",
+                                 "_ACCOM_TYPE@Guest House" = "Guest House",
+                                 "_ACCOM_TYPE@Motel"   = " Motel",
+                                 "_ACCOM_TYPE@Pension"  = "Pension",
+                                 "_ACCOM_TYPE@Hostel" = "Hostel",
+                                 "_ACCOM_TYPE@Apartment" = "Apartment",)
+```
+
+
+```{r}
+#6. 4 változó esetén az is felmerült, hogy az az értékek nem numerikusak, mivel a számok mögött szöveg is található, így ezeknél a "gsub" paranccsal kiszedem a szövegeket és numerikussá vektorrá alakítom. A 4 oszlop amelyben változásokat fogok bevezetni a citycenter_distance & sight_distance & guestreviewsrating & offer_cat. 
+
+aggregated_data$citycenter_distance <- gsub(" miles| mile", "", aggregated_data$citycenter_distance) 
+aggregated_data$citycenter_distance <- as.numeric(aggregated_data$citycenter_distance)
+
+aggregated_data$sight_distance <- gsub(" miles| mile", "", aggregated_data$sight_distance) 
+aggregated_data$sight_distance <- as.numeric(aggregated_data$sight_distance)
+
+aggregated_data$guestreviewsrating <- gsub(" /5", "", aggregated_data$guestreviewsrating) 
+
+guestreviewsrating <- unique(aggregated_data$guestreviewsrating)
+print(guestreviewsrating)
+
+#Megjegyzés, valamiért nem tudtam a guestreviewsrating oszlopot numerikussá alakítani. Az alábbi üzenetet kaptam: Warning: NAs introduced by coercion.
+#aggregated_data$guestreviewsrating <- as.numeric(aggregated_data$guestreviewsrating)
+
+
+aggregated_data$offer_cat <- gsub(" offer| no offer", "", aggregated_data$offer_cat) 
+```
+
+
+```{r}
+#3. Megnézem, hogy a oszlopok milyen típusként vannak az adattáblában és ha kell javítok/kicserélem az értelmezésüket. Pl.: Ha egy numerikus változós oszlop karakter típusú, akkor numerikussá változtatom.
+
+str(aggregated_data)
+```
+
+```{r}
+#4. Megnézem, hogy a változók milyen értékeket vehetnek fel és ha van megkötés, akkor azt is ellenőrzöm, hogy az értékek eleget tesznek-e a megkötéseknek. Az összes oszlopot a "summary" paranccsal ellenőrzöm.
+
+summary(aggregated_data)
+
+#Az offer oszlop esetén csak 0 és 1 értékek lehetnek, mivel a változó azt jelöli, hogy van-e ajánlat a szállodában vagy sem. 0 - nincs és 1 - van és a summary alapján megfelelnek az értékek. A scarce_room és holiday is hasonló.
+
+#A starrating oszlop esetén 1-5-s skálán mozoghatnak az értékek. Az összegzés alapján az értékek megfelelnek ennek a kritériumnak, mivel a minimum értékként az 1-t és maximum értékként at 5-t emelte ki. A rating2_ta is hasonló ehhez.
+```
+
+
+## 3.lépés  - Hiányzó adatok 
+
+
+##### Ellenőriztem, hogy vannak-e az adattáblában hiányzó adatok, és ha igen hol és vizualizáltam hány százalékát teszik ki a hiányzó adatok az össz adatoknak.
+
+```{r}
+#1. "is.na" paranccsal megnézem, hogy mely adatok hiányosak, viszont nem szeretném, hogy mind a 4333 megfigyelést egyesével leírja nekem, így az "any" paranccsal csak azt tudom meg hogy van-e hiányzó adat vagy sem. "TRUE" esetén van hiányzó adat, "FALSE" esertén minden adatunk megvan.
+
+any(is.na(aggregated_data))
+#Mivel "TRUE" értéket kaptam, ezért van hiányzó adat az adattáblában
+
+
+#2. A "colSums" paranccsal összegyűjtöm melyik oszlopban vannak hiányzó adatok és mennyi.
+
+colSums(is.na(aggregated_data))
+
+#4 oszlopban is van hiányzó adatom, de mivel nem tudom az adatgyűjtés/adattisztítás célját, ezért ezeket a megfigyeléseket benne hagyom a táblában.
+```
+
+# 4.lépés - A megtisztított adattábla jellemzése
+
+```{r}
+#1. Az adattáblában lévő adatokről a "summary" paranccsal összefoglalok alapvető tudnivalókat.
+
+summary(aggregated_data)
+
+```
+
+```{r}
+#2. A "colSums(is.na)" paranccsal a hiányzó értékeket tudom ellenőrizni.
+
+colSums(is.na(aggregated_data))
+```
+

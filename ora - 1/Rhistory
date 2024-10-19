@@ -1,0 +1,512 @@
+# height, then the species, then the rest.
+starwars_by_height_by_species_solution <- starwars |>
+group_by(species) |>
+arrange(species, desc(height), .by_group = TRUE) |>
+select(name, height, species, everything()) |>
+ungroup()
+test_that("exercise4", {
+expect_identical(
+starwars_by_height_by_species |> ungroup(),
+starwars_by_height_by_species_solution
+)
+})
+# Exercise 5: the preceding exercises asked you to compute the given
+# dataframe for a specific known dataset. Suppose that we give you a
+# subset of the dataset, e.g. in exercise 4 we give you a subset
+# called df and you have to rearrange it as described. Write a function
+# that returns the rearranged dataset. Do this for Exercise 1, 2, and 4.
+# The names for the functions are provided below, you have to define
+# the function and arguments.
+# The point of this exercise is that you can no longer hardcode some
+# ugly parts and check them or fix them by manually looking at the
+# data, you have to deal with the issues in code and take care of
+# all the edge cases automatically.
+# Notes: we will test your function with subsets of the data.
+# We can drop columns or rows arbitrarily and your code should work.
+# We will not add columns or rows.
+# You should interpret the exercise naturally: when we ask to include
+# year, month, and day from a tibble that only has year, then of course
+# you cannot include month and day, but you should include year.
+# You should test that your code works by trying out some subsets,
+# both column- and row-wise.
+flights_time_function_solution <- function(df) {
+# Need `any_of` so that code works if columns aren't there
+df |>
+select(any_of(c("year", "month", "day")), contains("time")) |>
+select(-any_of("air_time"))
+}
+# This one is probably hard to do without `where` and understanding
+# functions as arguments. Search for another solution.
+flights_text_function_solution <- function(df) {
+df |>
+select(where(is_character)) |>
+select(where(~ max(chr_length(.x)) < 4))
+}
+SW_hs_solution <- function(df) {
+# Assume that species and height are present so you can arrange by.
+# Do not assume that name is present, but put it first if it is.
+df |>
+group_by(species) |>
+arrange(species, desc(height), .by_group = TRUE) |>
+select(any_of(c("name")), height, species, everything()) |>
+ungroup()
+}
+test_that("exercise5_flights_time", {
+s1 <- select(flights, -c(year, month))
+expect_identical(
+flights_time_function(s1),
+flights_time_function_solution(s1)
+)
+})
+test_that("exercise5_flights_text", {
+carrier_tailnum <- flights |> select(carrier, tailnum)
+expect_identical(
+flights_text_function(carrier_tailnum),
+flights_text_function_solution(carrier_tailnum)
+)
+})
+test_that("exercise5_starwars", {
+starwars_noname<-starwars %>% select(-name)
+expect_identical(
+starwars_by_height_by_species_function(starwars_noname) |> ungroup(),
+SW_hs_solution(starwars_noname))
+})
+# Exercise 6: Using the flights data, for each carrier, find the flight
+# that had the smallest and the longest departure delay.
+# Put these 2 numbers into a column of their own, called 'best' (shortest
+# delay) and 'worst' (longest delay).
+# Keep the columns carrier, best, and worst in that order.
+flights_carrier_best_worst_solution <- flights |>
+select(carrier, dep_delay) |>
+arrange(carrier, dep_delay) |>
+group_by(carrier) |>
+mutate(
+worst = row_number(desc(dep_delay)),
+best  = row_number(dep_delay)
+) |>
+filter(worst <= 1 | best <= 1) |>
+mutate(type = if_else( best == 1,  "best",  "worst")) |>
+select(-c(best, worst)) |>
+pivot_wider(
+id_cols = c(carrier),
+names_from = type,
+values_from = dep_delay
+) |>
+select(carrier, best, worst) |>
+ungroup()
+test_that("exercise6", {
+expect_identical(
+flights_carrier_best_worst |> ungroup(),
+flights_carrier_best_worst_solution
+)
+})
+# Exercise 7: Find the days such that the most delayed flight on that
+# day is more delayed than the most delayed flight on the previous day.
+# Keep the year, month, day, and dep_delay columns (ordered in that order).
+flights_days_getting_worse_solution <- flights |>
+group_by(year, month, day) |>
+filter(row_number(desc(dep_delay)) <= 1) |>
+select(year, month, day, dep_delay) |>
+ungroup() |>
+filter(dep_delay > lag(dep_delay)) |>
+arrange(year, month, day)
+test_that("exercise7", {
+expect_identical(
+flights_days_getting_worse %>% select(year, month, day),
+flights_days_getting_worse_solution %>% select(year, month, day)
+)
+})
+flights_days_getting_worse <- flights |>
+filter(!is.na(dep_delay)) |>
+group_by(year, month, day) |>
+filter(dep_delay == max(dep_delay)) |>
+arrange(year, month, day) |>
+mutate(prev_max_dep_delay = lag(max(dep_delay), default = -Inf)) |>
+filter(prev_max_dep_delay < max(dep_delay)) |>
+select(year, month, day, dep_delay)
+flights_days_getting_worse%>%unique(year, month, day)
+flights_days_getting_worse %>% unique(year, month, day)
+flights_days_getting_worse %>% distinct(c("year", "month", "day"))
+flights_days_getting_worse %>% distinct(year, month, day, .keep_all = TRUE)
+flights_days_getting_worse %>% !distinct(year, month, day, .keep_all = TRUE)
+flights_days_getting_worse %>% distinct(year, month, day, .keep_all = TRUE)
+vmi<-flights_days_getting_worse %>% distinct(year, month, day, .keep_all = TRUE)
+flights_days_getting_worse-vmi
+# First name: <Yu>
+# When you get stuck, read the help on the functions that you are using;
+# search the help (via `??`) for specific types of functions, or read
+# about a library; post on Slack or search online.
+library(dplyr)
+library(stringr)
+# Exercise 1: Get all the columns from the NYC 2013 flights data
+# that contain data about a time (of arrival, departure, etc) - but
+# not about duration (e.g. flight duration). I.e. it is an event that
+# happened at a specific time. Keep year, month, day too.
+library(nycflights13)
+View(flights)
+# Note: time_hour also counts, but air_time does not - it is about the
+# duration spent in the air, so it does not happen at a specific time.
+flights_time <- flights |>
+select(year:day, starts_with('time'), ends_with('time')) |>
+select(-air_time)
+# Exercise 2: Keep the columns that contain text (i.e. character <chr>
+# type) and where the contents of the columns are at most 3 characters
+# long. (NA data counts as 0-length.)
+# Look up how to get the length of strings in library stringr.
+flights_text <- flights |>
+select(where(is.character) & where(~ max(nchar(.), na.rm = TRUE) <= 3))
+# Exercise 3: arrange the starwars characters from tallest to smallest,
+# with NA's at the top.
+starwars_by_height <- starwars |>
+arrange(!is.na(height), desc(height))
+# Exercise 4: arrange the starwars characters by species, then from
+# tallest to smallest WITHIN THEIR SPECIES! The NA's can be at the
+# bottom. Reorder the columns so that the name comes first, then the
+# height, then the species, then the rest.
+starwars_by_height_by_species <- starwars |>
+group_by(species) |>
+arrange(species, is.na(height), desc(height)) |>
+select(name, height, species, everything())
+# Exercise 5: the preceding exercises asked you to compute the given
+# dataframe for a specific known dataset. Suppose that we give you a
+# subset of the dataset, e.g. in exercise 4 we give you a subset
+# called df and you have to rearrange it as described. Write a function
+# that returns the rearranged dataset. Do this for Exercise 1, 2, and 4.
+# The names for the functions are provided below, you have to define
+# the function and arguments.
+# The point of this exercise is that you can no longer hardcode some
+# ugly parts and check them or fix them by manually looking at the
+# data, you have to deal with the issues in code and take care of
+# all the edge cases automatically.
+# Notes: we will test your function with subsets of the data.
+# We can drop columns or rows arbitrarily and your code should work.
+# We will not add columns or rows.
+# You should interpret the exercise naturally: when we ask to include
+# year, month, and day from a tibble that only has year, then of course
+# you cannot include month and day, but you should include year.
+# You should test that your code works by trying out some subsets,
+# both column- and row-wise.
+# FIXME: comment out and define function
+flights_time_function <- function(df) {
+df |>
+select(year:day, starts_with('time'), ends_with('time')) |>
+select(-air_time)
+}
+# This one is probably hard to do without `where` and understanding
+# functions as arguments. Search for another solution.
+# FIXME: comment out and define function
+flights_text_function <- function(df) {
+df |>
+select(where(is.character) & where(~ max(nchar(.), na.rm = TRUE) <= 3))
+}
+# Assume that species and height are present so you can arrange by.
+# Do not assume that name is present, but put it first if it is.
+# FIXME: comment out and define function
+starwars_by_height_by_species_function <- function(df) {
+df |>
+group_by(species) |>
+arrange(species, is.na(height), desc(height)) |>
+select(name, height, species, everything())
+}
+# Exercise 6: Using the flights data, for each carrier, find the flight
+# that had the smallest and the longest departure delay.
+# Put these 2 numbers into a column of their own, called 'best' (shortest
+# delay) and 'worst' (longest delay).
+# Keep the columns carrier, best, and worst in that order.
+flights_carrier_best_worst <- flights |>
+group_by(carrier) |>
+summarise(best = min(dep_delay, na.rm = TRUE), worst = max(dep_delay, na.rm = TRUE)) |>
+select(carrier, best, worst)
+# Exercise 7: Consider only days with dep_delay not missing. Find the days such
+# that the most delayed flight (by departure)
+# on that day of the year is more delayed than the most delayed flight on the
+# previous day. Keep yeary, month, day, and dep_delay columns.
+flights_days_getting_worse <- flights |>
+filter(!is.na(dep_delay)) |>
+select(year, month, day, dep_delay) |>
+group_by(year, month, day) |>
+summarise(dep_delay = max(dep_delay, na.rm = TRUE)) |>
+ungroup() |>
+filter(dep_delay > lag(dep_delay))
+# First name: <PUT YOUR NAME HERE>
+# When you get stuck, read the help on the functions that you are using;
+# search the help (via `??`) for specific types of functions, or read
+# about a library; post on Slack or search online.
+# Exercise 1: Get all the columns from the NYC 2013 flights data
+# that contain data about a time (of arrival, departure, etc) - but
+# not about duration (e.g. flight duration). I.e. it is an event that
+# happened at a specific time. Keep year, month, day too.
+library(nycflights13)
+# Note: time_hour also counts, but air_time does not - it is about the
+# duration spent in the air, so it does not happen at a specific time.
+flights_time_solution <- flights |>
+select(year:day, contains("time")) |>
+select(-air_time)
+test_that("exercise1", {
+expect_identical(flights_time, flights_time_solution)
+})
+View(flights_time)
+View(flights_time_solution)
+View(flights_time)
+# Look up how to get the length of strings in library stringr.
+chr_length <- function(c) {
+# The 0L is necessary to make the type integer
+if_else(is.na(c), 0L, stringr::str_length(c))
+}
+flights_text_solution <- flights |>
+select(where(is_character)) |>
+select(where(~ max(chr_length(.x)) < 4))
+test_that("exercise2", {
+expect_identical(flights_text, flights_text_solution)
+})
+# Exercise 3: arrange the starwars characters from tallest to smalles,
+# with NA's at the top.
+starwars_by_height_solution <- starwars |>
+arrange(!is.na(height), desc(height))
+test_that("exercise3", {
+expect_identical(starwars_by_height, starwars_by_height_solution)
+})
+starwars_by_height_by_species_solution <- starwars |>
+group_by(species) |>
+arrange(species, desc(height), .by_group = TRUE) |>
+select(name, height, species, everything()) |>
+ungroup()
+test_that("exercise4", {
+expect_identical(
+starwars_by_height_by_species |> ungroup(),
+starwars_by_height_by_species_solution
+)
+})
+flights_time_function_solution <- function(df) {
+# Need `any_of` so that code works if columns aren't there
+df |>
+select(any_of(c("year", "month", "day")), contains("time")) |>
+select(-any_of("air_time"))
+}
+# This one is probably hard to do without `where` and understanding
+# functions as arguments. Search for another solution.
+flights_text_function_solution <- function(df) {
+df |>
+select(where(is_character)) |>
+select(where(~ max(chr_length(.x)) < 4))
+}
+SW_hs_solution <- function(df) {
+# Assume that species and height are present so you can arrange by.
+# Do not assume that name is present, but put it first if it is.
+df |>
+group_by(species) |>
+arrange(species, desc(height), .by_group = TRUE) |>
+select(any_of(c("name")), height, species, everything()) |>
+ungroup()
+}
+test_that("exercise5_flights_time", {
+s1 <- select(flights, -c(year, month))
+expect_identical(
+flights_time_function(s1),
+flights_time_function_solution(s1)
+)
+})
+test_that("exercise5_flights_text", {
+carrier_tailnum <- flights |> select(carrier, tailnum)
+expect_identical(
+flights_text_function(carrier_tailnum),
+flights_text_function_solution(carrier_tailnum)
+)
+test_that("exercise5_starwars", {
+starwars_noname<-starwars %>% select(-name)
+expect_identical(
+starwars_by_height_by_species_function(starwars_noname) |> ungroup(),
+SW_hs_solution(starwars_noname))
+})
+qaeéeaú
+4v
+test_that("exercise5_flights_text", {
+carrier_tailnum <- flights |> select(carrier, tailnum)
+expect_identical(
+flights_text_function(carrier_tailnum),
+flights_text_function_solution(carrier_tailnum)
+)
+})
+test_that("exercise5_starwars", {
+starwars_noname<-starwars %>% select(-name)
+expect_identical(
+starwars_by_height_by_species_function(starwars_noname) |> ungroup(),
+SW_hs_solution(starwars_noname))
+})
+flights_carrier_best_worst <- flights |>
+group_by(carrier) |>
+summarise(best = min(dep_delay, na.rm = TRUE), worst = max(dep_delay, na.rm = TRUE)) |>
+select(carrier, best, worst)
+# Keep the columns carrier, best, and worst in that order.
+flights_carrier_best_worst_solution <- flights |>
+select(carrier, dep_delay) |>
+arrange(carrier, dep_delay) |>
+group_by(carrier) |>
+mutate(
+worst = row_number(desc(dep_delay)),
+best  = row_number(dep_delay)
+) |>
+filter(worst <= 1 | best <= 1) |>
+mutate(type = if_else( best == 1,  "best",  "worst")) |>
+select(-c(best, worst)) |>
+pivot_wider(
+id_cols = c(carrier),
+names_from = type,
+values_from = dep_delay
+) |>
+select(carrier, best, worst) |>
+ungroup()
+test_that("exercise6", {
+expect_identical(
+flights_carrier_best_worst |> ungroup(),
+flights_carrier_best_worst_solution
+)
+})
+# Exercise 7: Find the days such that the most delayed flight on that
+# day is more delayed than the most delayed flight on the previous day.
+# Keep the year, month, day, and dep_delay columns (ordered in that order).
+flights_days_getting_worse_solution <- flights |>
+group_by(year, month, day) |>
+filter(row_number(desc(dep_delay)) <= 1) |>
+select(year, month, day, dep_delay) |>
+ungroup() |>
+filter(dep_delay > lag(dep_delay)) |>
+arrange(year, month, day)
+test_that("exercise7", {
+expect_identical(
+flights_days_getting_worse %>% select(year, month, day),
+flights_days_getting_worse_solution %>% select(year, month, day)
+)
+})
+library(tidyverse)
+# Exercise 1: read documentation for `across` and figure out related functions
+# Use one of them to solve the following problem of filtering only those
+# rows of a df for which the columns named 'a' and 'b' are not NA, but other
+# columns can be NA.
+# For example: in the df below, you should be left only with the second and
+# third row.
+df <- tibble(a = c(1, 2, 3, NA), b = c(NA, 2, 3, NA), c = c(1, NA, 3, 4))
+a_b_notNA_solution <- df |> filter(if_all(c(a, b), ~ !is.na(.x)))
+test_that("exercise1", {
+expect_identical(a_b_notNA, a_b_notNA_solution)
+})
+View(df)
+library(tidyverse)
+# Exercise 1: read documentation for `across` and figure out related functions
+# Use one of them to solve the following problem of filtering only those
+# rows of a df for which the columns named 'a' and 'b' are not NA, but other
+# columns can be NA.
+# For example: in the df below, you should be left only with the second and
+# third row.
+df <- tibble(a = c(1, 2, 3, NA), b = c(NA, 2, 3, NA), c = c(1, NA, 3, 4))
+a_b_notNA_solution <- df |> filter(if_all(c(a, b), ~ !is.na(.x)))
+test_that("exercise1", {
+expect_identical(a_b_notNA, a_b_notNA_solution)
+})
+mean_median_sd <- list(
+mean = ~mean(.x, na.rm = TRUE),
+median = ~mean(.x, na.rm = TRUE),
+sd = ~sd(.x, na.rm = TRUE)
+)
+stats_by_month_solution <- flights |>
+group_by(month) |>
+summarise(
+across(c(dep_delay, arr_delay, air_time), mean_median_sd)
+)
+View(mean_median_sd)
+library(nycflights13)
+stats_by_month_solution <- flights |>
+group_by(month) |>
+summarise(
+across(c(dep_delay, arr_delay, air_time), mean_median_sd)
+)
+View(stats_by_month_solution)
+check_first_row_solution <- function(filepath) {
+data <- read_csv(filepath, n_max = 1, col_names=FALSE)
+if(all(sapply(data, is.character))) {
+return(TRUE)
+} else {
+return(FALSE)
+}
+read.csv("hotels-vienna.csv")
+#Rajk öknometria, 2024-09-17
+#Bárdits Anna
+#set working directory
+#---------------------
+setwd("G:/Saját meghajtó/ongoing/rajk/orai-anyag/1-adatok-eredete-0917")
+#install and load packages
+#install.packages("tidyverse")
+library(tidyverse)
+#Explore data set
+#-------------------
+#read in data - need to know the type
+read.csv("hotels-vienna.csv")
+hotels_df<-read.csv("hotels-vienna.csv")
+help("read.csv")
+View(hotels_df)
+View(hotels_df)
+View(hotels_df)
+distinct_ids<-hotels_df %>% select(hotel_id)  %>% distinct
+sum(duplicated(hotels_df$hotel_id))
+summary(hotels_df)
+summary(hotels_df)
+head(hotels_df$rating)
+summary(hotels_df)
+summary(hotels_df %>% select(country, rating_count, price, stars, distance, rating))
+summary(hotels_df %>% select(country, rating_count, price, stars, accommodation_type, distance, rating))
+summary(hotels_df %>% select(country, rating_count, price, stars, accommodation_type, distance, rating))
+hotels_df<-hotels_df %>% mutate(acc_type=as.factor(accommodation_type))
+summary(hotels_df %>% select(country, rating_count, price, stars, accommodation_type, distance, rating))
+summary(hotels_df %>% select(country, rating_count, price, stars, acc_type, distance, rating))
+hotels_df<-hotels_df %>% arrange(rating)
+#Rajk öknometria, 2024-09-17
+#Bárdits Anna
+#set working directory
+#---------------------
+setwd("G:/Saját meghajtó/ongoing/rajk/orai-anyag/1-adatok-eredete-0917")
+#install and load packages
+#install.packages("tidyverse")
+library(tidyverse)
+#Explore data set
+#-------------------
+#read in data - need to know the type
+read.csv("hotels-vienna.csv")
+#put the data in a R data table
+hotels_df<-read.csv("hotels-vienna.csv")
+#nézzük meg
+#keresztmetszeti? panel? idősoros?
+distinct_ids<-hotels_df %>% select(hotel_id)  %>% distinct
+sum(duplicated(hotels_df$hotel_id))
+#hány mgefigyelés van
+length(hotels_df$hotel_id)
+#kb mi van benne?
+summary(hotels_df %>% select(country, rating_count, price, stars, acc_type, distance, rating))
+#Rajk öknometria, 2024-09-17
+#Bárdits Anna
+#set working directory
+#---------------------
+setwd("G:/Saját meghajtó/ongoing/rajk/orai-anyag/1-adatok-eredete-0917")
+#install and load packages
+#install.packages("tidyverse")
+library(tidyverse)
+#Explore data set
+#-------------------
+#read in data - need to know the type
+read.csv("hotels-vienna.csv")
+#put the data in a R data table
+hotels_df<-read.csv("hotels-vienna.csv")
+#nézzük meg
+#keresztmetszeti? panel? idősoros?
+distinct_ids<-hotels_df %>% select(hotel_id)  %>% distinct
+sum(duplicated(hotels_df$hotel_id))
+#hány mgefigyelés van
+length(hotels_df$hotel_id)
+#kb mi van benne?
+summary(hotels_df %>% select(country, rating_count, price, stars, distance, rating))
+head(hotels_df$rating)
+#missingek
+hotels_df<-hotels_df %>% mutate(acc_type=as.factor(accommodation_type))
+summary(hotels_df)
+#value labelek
+hotels_df<-hotels_df %>% arrange(rating)
+levels(hotels_df$acc_type)

@@ -1,0 +1,151 @@
+---
+title: "pre R"
+author: "Novák Levente"
+date: "2024-09-13"
+output: html_document
+---
+
+```{r}
+# ezekbe a "chunk"-okba jönnek a kódok
+
+# hashtag jellel a kommentek
+
+# ctrl + alt + I --> új chunk
+# macen: ctrl + option + I --> új chunk
+
+```
+
+
+### ide lehet írni bármit
+
+
+```{r}
+# ezzel most nem kell foglalkozni --> majd alkalom végén elmondom miért van ez itt
+# ha elfelejtem elmondani, légyszi szóljatok rám
+
+suppressPackageStartupMessages({
+  library(dplyr)
+  library(readxl)
+  library(ggplot2)
+  library(labelled)
+  library(corrplot)
+  library(lmtest)
+  library(psych)
+  library(stargazer)
+  library(png)
+  library(grid)
+  library(stats)
+  library(haven)
+  library(car)
+  library(mosaic)
+  library(lmtest)
+  library(pROC)
+  library(readxl)
+  library(openxlsx)
+  library(fredr)
+  library(lubridate)
+  library(tidyr)
+  library(vcd)
+  library(Synth)
+  library(haven)
+  library(ggtext)
+})
+
+
+```
+
+
+### erre a részre lehet írni bármit
+
+### (ez most r markdown, sima r script-nél nincsenek külön chunkok és ilyen irogatós rész, hanem minden "kódolós chunk-nak" minősül)
+
+#### de akár felsorolást is csinálhatok, például, így:
+- egy, megérett a  meggy
+- kettő, csipkebokor vessző
+- három, te leszel a
+
+
+```{r}
+# megfelelő mappába mentés --> oda, ahol a megnyitandó fájl van (ha több fájl van, akkor mindegyiket ugyanabba a fájlba érdemes lementeni)
+
+setwd("~/Documents/Documents - betts’s MacBook Air/rajk/kurzusok/2.félév/ökonometria"")
+# nem elfelejteni: \ jeleket le kell cserélni --> / jelekre
+# érdemes rámenni a rosszul álló zárójelekre és ctrl + F-et nyomni, majd a "replace" felirat helyére beírni a jó zárójelet, majd "replace" paranccsal végig kicserélhetőek
+```
+
+
+```{r}
+# adatfájlok behívása
+
+# van pár beépített függvény
+# pl.:
+titanic <- read.csv("titanic.csv")
+
+
+adat <- read.csv("titanic.csv")
+rm("adat")
+
+# de a legtöbb függvény, amit használunk, az valamilyen "csomagban" elérhető
+
+# ezeket a csomagokat be kell hívni az "install.packages" paranccsal
+
+# install.packages --> minden package-et elég egyszer installálni
+# utána már csak "library"-vel elő kell hívni
+install.packages("readxl")
+library(readxl)
+haztartas <- read_excel("haztartas.xlsx")
+
+```
+
+
+ctrl + Alt + I --> új chunk
+nekem általában nem működik --> ilyenkor kimásolom a ezeketa jeleket és manuálisan hozok létree chunk-okat
+
+
+```{r}
+# nézzük példát hogyan működnek egyes függvények
+
+# egy gyakran használt package
+install.packages("dplyr")
+library(dplyr)
+
+# gyakran használt függvények a dplyr packageből: rename, mutate, filter, select, summarise, group_by...
+
+# érdemes az eredeti fájlt békiben hagyni és egy újat szerkeszteni, hogy meglegyen az eredeti verzió is
+# (vagy csinálni egy másolatot az eredeti excelről megfelelő mappában pl. titanic_eredeti néven)
+
+titanic_uj <- titanic %>% # ctrl + shift + m --> pipeline
+  rename(nev = Name) %>% 
+  rename(nem = Sex)
+
+titanic_uj <- titanic_uj %>% 
+  select(-Cabin, -Ticket)
+
+haztartas_uj <- haztartas %>% 
+  mutate(jovedelem = JovEFt * 1000)
+
+# illetve érdemes olyan neveket adni a data frame-eknek, amiket kényelmes gépelni (pl. adat, data)
+
+```
+
+
+```{r}
+# és mégis mi ez a %>% jel?
+# ctrl + shift + M-mel írható
+
+# pipeline-nak hívjuk
+# és egymás után hajtja végre a parancsokat
+
+# pl.:
+adat <- haztartas %>% 
+  rename(jovedelem_ezerforintban = JovEFt) %>% 
+  mutate(jovedelem = jovedelem_ezerforintban * 1000) %>% 
+  select(ElvezEFt, Dohanyzo, HFneme, jovedelem)
+
+```
+
+
+### "kiknit"-elni --> felül "Knit" parancs, majd "Knit to html"
+### csak akkor tudja "kiknittelni", ha minden parancs végrehajtható, különben nem fut le és elakad --> alul jelzi azt, hogy melyik sornál akadt el (hibaüzenetként)
+
+

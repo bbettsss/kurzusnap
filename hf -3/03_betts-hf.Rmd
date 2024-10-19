@@ -1,0 +1,414 @@
+---
+title: "03_betts-hf"
+author: "betts"
+date: "2024-10-06"
+output: html_document
+---
+
+# 2024.október 6. - Ökönometria házi feladat 2. - wms management survey
+
+<br>
+
+## 0.lépés - Előkészítés/Adattisztítás
+
+### Az adatok megtisztításához és rendezéséhez szükséges lépések véghezvitele, mint a fájl hely beállítása, a packagek betöltése, az adatok beolvasása és betöltése.
+
+<br>
+
+```{r}
+setwd("~/Documents/Documents - betts’s MacBook Air/rajk/kurzusok/3.félév/ökonometria/hf -3")
+
+#install.packages("broom")
+#install.packages("cowplot")
+
+library(tidyverse)
+library(dplyr)
+library(scales)
+library(xtable)
+library(modelsummary)
+library(ggthemes)
+library(extrafont)
+library(cowplot)
+library(broom)
+library(corrplot)
+library(gridExtra)
+library(tidyr)
+
+wms_data <- read.csv("wms_da_textbook.csv")
+```
+
+<br>
+
+### A country oszlopból előhívtam a változókat és azok alapján kiválasztottam Szingapúrt, mint célország és egy új adattáblába kiszűrtem ezeket, és mivel az összes adatom 2012-re szól, ezért nem szűrtem tovább.
+<br>
+
+```{r}
+print(unique(wms_data$country))
+
+singapore_data <- wms_data%>%
+  filter(country=="Singapore")
+```
+
+<br>
+
+### Az adattáblában szerepelt közel 200 olyan változó, amit nem fogok használni az elemzésem során, emiatt kivettem őket, hogy későbbiekben könnyebb legyen az adattáblát értelmezni.
+
+<br>
+
+```{r}
+singapore_data <- singapore_data[, -c(41:245)]
+```
+
+<br>
+
+### Megnéztem, hogy az adattáblában szerepel-e olyan hiányzó adat, ami az emp_firm vagy a management változó oszlopait érinti. Mivel az emp_firm oszlopban szerepeltek N/A értékek, ezért kiszedtem azokat a megfigyeléseket, amelyeknél az emp_firm oszlopban N/A adat szerepelt, hogy a későbbi elemzés során már a tiszta adatokat tudjam vizsgálni.
+
+<br>
+
+```{r}
+any(is.na(singapore_data))
+
+colSums(is.na(singapore_data))
+
+singapore_data <- singapore_data[complete.cases(singapore_data[, c("emp_firm")]), ]
+
+colSums(is.na(singapore_data))
+```
+
+<br>
+
+## 1.lépés - Főkomponens elemzés
+
+<br>
+
+### A főkomponens elemzés előkészítéséhez létrehoztam egy adattáblát, amelyben csak az a 18 változóm szerepel, amelyek szükségesek lesznek a főkomponens létrehozásához.
+
+<br>
+
+```{r}
+pca_data <- singapore_data %>% 
+  select(where(is.numeric))
+
+
+pca_data <- pca_data[, c(9:26)]
+```
+
+<br>
+
+### A pca_table adattáblámon végrehajtom a főkomponens analízist a prcomp paranccsal.
+
+<br>
+
+```{r}
+pca_table <- pca_data %>% 
+  prcomp(scale = TRUE)
+
+summary(pca_table)
+```
+
+<br>
+
+### Miután létrehoztam a főkomponenseimet, az első (PC1) értékeknek létrehozok egy oszlopot a singapore_data adathalmazomban.
+
+<br>
+
+```{r}
+
+singapore_data$PC1 <- pca_table$x[, 1]
+
+```
+
+<br>
+
+## 2.lépés - Rotation matrix
+
+<br>
+
+```{r}
+pca_table %>%
+  tidy(matrix = "rotation") %>%
+  pivot_wider(names_from = "PC", names_prefix = "PC", values_from = "value") %>%
+  ggplot(aes(PC1, PC2)) +
+  geom_segment(xend = 0, yend = 0, 
+               arrow = arrow(angle = 20, ends = "first", type = "closed", length = grid::unit(8, "pt"))) +
+  geom_text(
+    aes(label = column),
+    hjust = 1, nudge_x = -0.05, nudge_y = 0.05, 
+    color = "#049445", size = 3
+  ) +
+  xlim(-0.5, 0.25) + ylim(-0.5, 0.6) +
+  theme_clean(12) +
+  theme(aspect.ratio = 3/4) +
+   theme(text = element_text(family = "Arial"),
+    axis.title.x = element_text(face = "bold"),
+    axis.title.y = element_text(face = "bold"))
+
+```
+
+
+```{r}
+pca_table %>% tidy(matrix="eigenvalues")
+```
+
+```{r}
+pca_table %>%
+  tidy(matrix = "eigenvalues") %>%
+  ggplot(aes(PC, percent)) +
+  geom_col(color="#0b4d29", fill = "#049445", alpha = 0.7) +
+  labs(title = "PC értékek százalékos aránya", x = "Százalék", y = "PC") +
+  scale_x_continuous(breaks = 1:18) +
+  scale_y_continuous(
+    labels = scales::percent_format(),
+    expand = expansion(mult = c(0, 0.01))) +
+  theme_clean(16) +
+  theme(text = element_text(family = "Arial"),
+    axis.title.x = element_text(face = "bold"),
+    axis.title.y = element_text(face = "bold"))
+```
+
+<br>
+
+## 3.lépés - A főkomponens analízis értelmezéséhez létrehoztam rekesz-pontdiagramokat és pontdiagramokat, hogy könnyebben lehessen értelmezni a kapott adatokat. A főkomponens és a válllatvezetési pontszám kapcsolatán keresztül vizsgálva.
+
+<br>
+
+```{r}
+ggplot(singapore_data, aes(emp_firm)) +
+  geom_histogram(aes(y=after_stat(count / sum(count))), binwidth = 10000, color="#0b4d29", fill="#049445", alpha = 0.7) + 
+  labs(title = "Vállalatok méretének eloszlása Szingapúrban", x="Vállalatméret (alkalmazottak száma)", y="Relatív gyakoriság") +
+  theme_clean(16) +
+  theme(text = element_text(family = "Arial"),
+    axis.title.x = element_text(face = "bold"),
+    axis.title.y = element_text(face = "bold"))
+```
+
+```{r}
+singapore_data <- singapore_data %>%
+  mutate(ln_emp_firm = log(emp_firm))
+```
+
+
+```{r}
+singapore_data %>% 
+  ggplot(aes(ln_emp_firm)) +
+  geom_histogram(aes(y = after_stat(count / sum(count))), binwidth = 0.3, color = "#0b4d29", fill = "#049445", alpha = 0.7) + 
+  labs(title = "Vállalatok méretének eloszlása Szingapúrban", 
+       x = "Vállalat mérete (alkalmazottak száma)", 
+       y = "Relatív gyakoriság") +
+  theme_clean(16) +
+  theme(text = element_text(family = "Arial"),
+    axis.title.x = element_text(face = "bold"),
+    axis.title.y = element_text(face = "bold"))
+
+```
+
+```{r}
+range(singapore_data$ln_emp_firm, na.rm = TRUE)
+range(singapore_data$PC1, na.rm = TRUE)
+range(singapore_data$management, na.rm = TRUE)
+
+
+```
+
+
+
+```{r}
+ggplot(singapore_data, aes(x = ln_emp_firm, y = PC1)) +
+  geom_point(color = "#ed3615", size = 1.5,  shape = 16, show.legend=FALSE, na.rm = TRUE) + 
+  geom_smooth(method = "lm", se = FALSE, linetype = "solid", color = "#ed3615") + 
+  scale_x_continuous(expand = c(0.01,0.01),limits=c(3, 13), breaks=seq(3, 13, by=1)) + 
+  scale_y_continuous(expand = c(0.01,0.01),limits = c(-8, 8), breaks = seq(-8, 8,1)) +
+  labs(title = "A vállalatok méretének hatása az első főkomponensre", x = "Alkalmazottak számának logaritmusa", y = "Első fokomponens (PC1)")+
+  theme_clean(16) +
+  theme(text = element_text(family = "Arial"),
+    axis.title.x = element_text(face = "bold"),
+    axis.title.y = element_text(face = "bold"))
+```
+
+
+```{r}
+
+ggplot(singapore_data, aes(x = ln_emp_firm, y = management)) +
+  geom_point(color = "#0b4d29", size = 1.5, shape = 16, show.legend = FALSE, na.rm = TRUE) + 
+  geom_smooth(aes(y = management), method = "lm", se = FALSE, linetype = "solid", color = "#0b4d29") +
+  scale_x_continuous(breaks = seq(0, 15, by = 1)) + 
+  scale_y_continuous(expand = c(0.01, 0.01), limits = c(1, 5), breaks = seq(1, 5, 1)) +
+  labs(title = "Az alkalmazottak számának logaritmusa és a vállalati vezetés kapcsolata", 
+       x = "Alkalmazottak számának logaritmusa", 
+       y = "Vállalati vezetés") +
+  theme_clean(16) +
+  theme(text = element_text(family = "Arial"),
+        axis.title.x = element_text(face = "bold"),
+        axis.title.y = element_text(face = "bold"))
+
+
+```
+
+```{r}
+cor(singapore_data$PC1, singapore_data$ln_emp_firm) 
+#A korreláció a főkomponens és az alkalmazottak számának logaritmusa között = (-0,4701)
+# - a főkomponens és az alkalmazottak számának logaritmusa között közepes, negatív korreláció van
+
+cor(singapore_data$management, singapore_data$ln_emp_firm)
+#A korreláció a főkomponens és az alkalmazottak számának logaritmusa között = (0,4675)
+# - a főkomponens és az alkalmazottak számának logaritmusa között közepes, pozitív korreláció van
+
+# Tehát a főkomponens és a management változók ellentétes irányú kapcsolatban állnak az alkalmazottak számának logaritmusával. Amit a 
+```
+
+```{r}
+#Scatterplot ábra, amin jól látható, hogy ellentétes korrelációt mutat a Vezetés és a PCA1 főkomponens az alkalmazottak számának logaritmusával
+
+ggplot(singapore_data, aes(x = ln_emp_firm)) +
+  geom_point(aes(y = management, color = "Vezetés"), size = 1.5, shape = 16, na.rm = TRUE) + 
+  geom_point(aes(y = PC1, color = "Első fokkomponens (PC1)"), size = 1.5, shape = 16, na.rm = TRUE) + 
+  geom_smooth(aes(y = management, color = "Vezetés"), method = "lm", se = FALSE, linetype = "solid") + 
+  geom_smooth(aes(y = PC1, color = "Első fokkomponens (PC1)"), method = "lm", se = FALSE, linetype = "dashed") + 
+  scale_x_continuous(breaks = seq(3, 15, by = 1)) +
+  scale_y_continuous(expand = c(0.01, 0.01), limits = c(-8, 8), breaks = seq(-8, 8, 1)) +
+  labs(title = "Alkalmazottak számának logaritmusának kapcsolata a Vezetés és PC1 változóval", 
+       x = "Alkalmazottak számának logaritmusa", 
+       y = "Változók értéke") +
+  scale_color_manual(values = c("Vezetés" = "#0b6e37", "Első fokkomponens (PC1)" = "#ed3615")) +
+  theme_clean(16) +
+  theme(text = element_text(family = "Arial"),
+    axis.title.x = element_text(face = "bold"),
+    axis.title.y = element_text(face = "bold"))
+
+```
+
+
+
+```{r}
+#csoportosítom az alkalmazottak számai alapján a a vállalatokat, kis-közép-nagyvállalat hármasba 
+singapore_data$emp_group <- as.factor(ifelse(singapore_data$emp_firm<150, 1, 
+                                      ifelse(singapore_data$emp_firm>=150 & singapore_data$emp_firm<1000, 2,
+                                             ifelse(singapore_data$emp_firm>=1000, 3,100))))
+
+table(singapore_data$emp_group)
+```
+
+```{r}
+#a csoportosításban az emp_group átlagos vezetői értékei vannak
+group1<-singapore_data %>% group_by(emp_group) %>%
+  dplyr::summarize(management_emp_group=mean(management))
+
+#a csoportosításban az emp_group átlagos PCA1 főkomposens értékei vannak
+group2<-singapore_data %>% group_by(emp_group) %>%
+  dplyr::summarize(pc_emp_group=mean(PC1))
+```
+
+
+```{r}
+#ebben a scatterplotban ábrázolom a vállalt mérete és vezetési pontszám közötti kapcsolatot 
+
+ggplot(data = group1, aes(x = emp_group, y = management_emp_group)) +
+  geom_point(size = 2, fill= "black", shape = 16, na.rm=T) +
+  labs(title = " A vállaltok mérete és vezetési pontszáma közötti kapcsolat", x="Vállalat mérete", y="Vezetési pontszám")+
+  scale_y_continuous(expand = c(0.01,0.01),limits = c(2.4, 3.4), breaks = seq(2.4, 3.4, by=0.2)) +
+  scale_x_discrete(labels=c("1" = "Kis", "2" = "Közepes", "3" = "Nagy"))+
+  theme_clean(16) +
+  theme(text = element_text(family = "Arial"),
+    axis.title.x = element_text(face = "bold"),
+    axis.title.y = element_text(face = "bold"))
+
+```
+
+```{r}
+
+boxplot_management<- ggplot(singapore_data, aes(x=emp_group, y=management, fill=emp_group))+
+  geom_boxplot(width=0.6, alpha=0.8, show.legend = FALSE) +
+  scale_x_discrete(labels=c("1" = "Kis", "2" = "Közepes", "3" = "Nagy"))+
+  labs(title = "A menedzsment teljesítménye a vállalat mérete alapján", x="Vállalat mérete", y="Vezetési pontszám")+
+  scale_fill_manual(values = c("1" = "#505e51", "2" = "#439946", "3" = "#02cc09")) +
+  theme(legend.position = "none") + 
+  theme_clean(16) +
+  theme(text = element_text(family = "Arial"),
+    axis.title.x = element_text(face = "bold"),
+    axis.title.y = element_text(face = "bold"))
+
+print(boxplot_management)
+```
+
+
+főkomponensre megcsinálnin ezt megint --> mit?
+
+
+```{r}
+ggplot(data = group2, aes(x = emp_group, y = pc_emp_group)) +
+  geom_point(size = 2, fill= "black", shape = 16, na.rm=T) +
+  labs(title = "Kapcsolat a vállalat mérete és az első főkomponens között", x="Vállalat mérete", y="Első főkomponens (PCA1)")+
+  scale_x_discrete(labels=c("1" = "Kis", "2" = "Közepes", "3" = "Nagy"))+
+  scale_y_continuous(expand = c(0.01,0.01),limits = c(-3, 3), breaks = seq(-3, 3, by=1)) +
+  theme_clean(16) +
+  theme(text = element_text(family = "Arial"),
+    axis.title.x = element_text(face = "bold"),
+    axis.title.y = element_text(face = "bold"))
+```
+
+
+```{r}
+boxplot_pca1 <- ggplot(singapore_data, aes(x=emp_group, y=PC1, fill=emp_group))+
+  geom_boxplot(width=0.6, alpha=0.8, show.legend = FALSE) +
+  scale_x_discrete(labels=c("1" = "Kis", "2" = "Közepes", "3" = "Nagy"))+
+  labs(title = "A vállalat méretének hatása az első főkomponensre", x="Vállalat mérete", y="Első főkomponens (PCA1)")+
+  scale_fill_manual(values = c("1" = "#8a6a65", "2" = "#cf4f38", "3" = "#f52702")) +
+  theme(legend.position = "none") + 
+  theme_clean(16) +
+  theme(text = element_text(family = "Arial"),
+    axis.title.x = element_text(face = "bold"),
+    axis.title.y = element_text(face = "bold"))
+
+print(boxplot_pca1)
+```
+
+```{r}
+grid.arrange(boxplot_management, boxplot_pca1, ncol = 2)
+```
+
+```{r}
+singapore_data_long <- singapore_data %>%
+  pivot_longer(cols = c(management, PC1), 
+               names_to = "measure", 
+               values_to = "value")
+
+singapore_data$emp_group <- as.factor(singapore_data$emp_group)
+
+singapore_long <- singapore_data %>%
+  select(emp_group, management, PC1) %>%
+  pivot_longer(cols = c(management, PC1), names_to = "measurement", values_to = "value")
+
+
+ggplot(singapore_long, aes(x = emp_group, y = value, fill = interaction(emp_group, measurement))) +
+  geom_boxplot(width = 0.6, alpha = 0.8) +
+  scale_x_discrete(labels = c("1" = "Kis", "2" = "Közepes", "3" = "Nagy")) +
+  labs(title = "A vezetés pontszájma és az első főkomponens kapcsolata a vállalat mérete alapján", 
+       x = "Vállalat mérete", 
+       y = "Vezetési pontszám") +
+  scale_fill_manual(values = c("#505e51", "#439946", "#02cc09",
+                                "#8a6a65", "#cf4f38", "#f52702"),
+                     labels = c("Kis vállalat - Vezetés", "Közepes vállalat - Vezetés", "Nagy vállalat - Vezetés", 
+                               "Kis vállalat - PCA1", "Közepes vállalat - PCA1", "Nagy vállalat - PCA1")) +
+  theme(legend.position = "none") + 
+  theme_clean(16) +
+  theme(text = element_text(family = "Arial"),
+        axis.title.x = element_text(face = "bold"),
+        axis.title.y = element_text(face = "bold"))
+
+```
+
+
+```{r}
+statistics_by_group <- singapore_data %>%
+  group_by(emp_group) %>%
+  summarise(
+    mean_pc1 = mean(PC1),
+    mean_man = mean(management),
+    sum_pc1 = sum(PC1),
+    sum_man = sum(management),
+    No_items = n()
+  )
+
+print(statistics_by_group)
+```
+

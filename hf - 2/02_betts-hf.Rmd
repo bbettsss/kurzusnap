@@ -1,0 +1,544 @@
+---
+title: "02_hf"
+author: "betts"
+date: "2024-09-24"
+output: html_document
+---
+
+# 2024.szeptember 25. - Ökönometria házi feladat 2. - hotels - Stockholm
+
+<br>
+
+## 0.lépés - Előkészítés/Adattisztítás
+
+### Az adatok megtisztításához és rendezéséhez szükséges lépések véghezvitele, mint a fájl hely beállítása, a packagek betöltése, az adatok beolvasása és betöltése.
+
+<br>
+```{r}
+#setwd("~/Documents/Documents - betts’s MacBook Air/rajk/kurzusok/2.félév/ökonometria/hf - 2")
+
+
+#install.packages("ggthemes")
+#install.packages("extrafont")
+
+library(tidyverse)
+library(dplyr)
+library(scales)
+library(xtable)
+library(modelsummary)
+library(ggthemes)
+library(extrafont)
+
+hotels_data <- read.csv("hotelbookingdata.csv")
+```
+
+<br>
+
+### Az addresscountryname oszlopból előhívtam a változókat és azok alapján kiválasztottam Svédországot, mint célország. Utána előhívtam azokat a változókat  a city_actual oszlopből, amelyek megfelelnek annak, hogy Svédországban találhatóak. Majd látva, hogy mely városokről van adat, kiválasztottam Stockholm-t, mint vizsgálandó város.
+
+<br>
+
+```{r}
+
+print(unique(hotels_data$addresscountryname))
+
+hotels_data %>%
+  filter(addresscountryname == "Sweden") %>%
+  pull(city_actual) %>%
+  unique() %>%
+  print()
+
+```
+
+
+<br>
+
+### Az adatok szűrése kifejezetten a Stockholm-i hoteleket célozva a filter paranccsal.
+
+<br>
+
+```{r}
+
+stockholm_data <- hotels_data %>% 
+  filter(city_actual == "Stockholm")
+
+```
+
+
+<br>
+
+### Mivel az adattáblában egyszerre szerepelnek az 1 éjszakára és a 4 éjszakára vonatkozó árak, így megvizsgálom, hogy az egyes megfigyelésekből mennyi található és az alapján az egyik vagy a másik vagy mindekttő alapján fogom vizsgálni később az árak gyakoriságát.
+
+<br>
+
+```{r}
+print(unique(hotels_data$price_night))
+
+stockholm_data %>%
+  filter(price_night == "price for 1 night") %>%
+  count()
+
+stockholm_data %>%
+  filter(price_night == "price for 4 nights") %>%
+  count()
+```
+
+<br>
+
+### Mivel jelentősen több adat szerepel az 1 éjszakára vonatkozó adatokból, így később ezeken az adatokon fogok tovább dolgozni.
+
+<br>
+
+```{r}
+stockholm_data$price_night <- recode(stockholm_data$price_night,
+                                 "price for 1 night" = "1",
+                                 "price for 4 nights" = "4",)
+
+stockholm_data$price_night <- as.numeric(stockholm_data$price_night)
+
+str(stockholm_data)
+
+```
+
+
+<br>
+
+### Számomra nem volt egyértelmű 3 oszlopnak az elnevezése, így a center1distance & center2label & center2distance oszlopokat átnevezem, citycenter_distance & sightname & sight_distance nevű oszlopokra.
+
+<br>
+
+```{r}
+
+stockholm_data <- stockholm_data %>% 
+  rename(citycenter_distance = center1distance) %>% 
+  rename(sightname = center2label) %>% 
+  rename(sight_distance = center2distance)
+
+```
+
+<br>
+
+### Az "identical" paranccsal megnézem, hogy a két oszlopomban megegyeznek-e az értékek és azonos sorrendben vannak-e. Ha lefuttatás után "TRUE" értéket kapok, akkor a két tábla megegyezik egymással.
+
+<br>
+
+```{r}
+identical(stockholm_data$city_actual, stockholm_data$s_city)
+```
+
+<br>
+
+### Számomra az oszlopok sorrendje kevésbé logikus, ezért úgy próbálom elhelyezni, hogy az összetartozó változók egymás mellé kerüljenek. 
+
+<br>
+
+### Ezen felül kiveszem a s_city nevű változót, mivel az előző pontban bebizonyítottam, hogy megegyezik a city_actual változóval, így nem ad plusz információt az adatainkhoz. És center1label nevű változót is kiveszem, mivel átneveztem a center1distance változót citycenter_distance-re, ami összevonja a két oszlopot intuitívan. A változások miatt létrehozok egy új adattáblát, aminek az aggregated_data nevet adtam.
+
+### A "select" paranccsal kiválasztom azokat az oszlopokat, amelyek szükségesek és új sorrendbe rakom őket.
+
+<br>
+
+```{r}
+stockholm_data <- stockholm_data %>% 
+  select(addresscountryname, city_actual, neighbourhood, hotel_id, price, price_night, accommodationtype, citycenter_distance, sightname, sight_distance, offer, starrating, guestreviewsrating, rating_reviewcount, rating2_ta, rating2_ta_reviewcount, scarce_room, offer, offer_cat, year, month, weekend, holiday)
+```
+
+<br>
+
+### A nem intuitív változó/oszlopnevek egyszerűsítése a könnyebb adatértelmezés érdekében. Az adatok vizsgálata közben kijött, hogy az accommodationtype oszlop változó értékeinek elnevezése nem rögtön egyértelmű, így a "unique" paranccsal összegyűjtöm az összes változót az oszlopban, hogy könnyebben át tudjam nevezni őket. A 7 változómat leegyszerűsítés miatt "recode" paranccsal átnevezem.
+
+<br>
+
+```{r}
+print(unique(stockholm_data$accommodationtype))
+
+stockholm_data <- stockholm_data %>% mutate(accommodationtype = as.factor(accommodationtype))
+
+stockholm_data$accommodationtype <- recode(stockholm_data$accommodationtype,
+                                 "_ACCOM_TYPE@Hotel" = "Hotel",
+                                 "_ACCOM_TYPE@Apart-hotel" = "Apart-hotel",
+                                 "_ACCOM_TYPE@Guest House" = "Guest House",
+                                 "_ACCOM_TYPE@Bed and breakfast" = "Bed and breakfast",
+                                 "_ACCOM_TYPE@House boat"  = "House boat",
+                                 "_ACCOM_TYPE@Hostel" = "Hostel",
+                                 "_ACCOM_TYPE@Apartment" = "Apartment",)
+```
+
+<br>
+
+### 4 változó esetén az is felmerült, hogy az az értékek nem numerikusak, mivel a számok mögött szöveg is található, így ezeknél a "gsub" paranccsal kiszedem a szövegeket és numerikussá vektorrá alakítom. A 4 oszlop amelyben változásokat fogok bevezetni a citycenter_distance & sight_distance & guestreviewsrating & offer_cat. 
+
+<br>
+
+### Megnézem, hogy a oszlopok milyen típusként vannak az adattáblában és ha kell javítok/kicserélem az értelmezésüket. Pl.: Ha egy numerikus változós oszlop karakter típusú, akkor numerikussá változtatom.
+
+<br>
+
+```{r}
+
+stockholm_data$citycenter_distance <- gsub(" miles| mile", "", stockholm_data$citycenter_distance) 
+stockholm_data$citycenter_distance <- as.numeric(stockholm_data$citycenter_distance)
+
+stockholm_data$sight_distance <- gsub(" miles| mile", "", stockholm_data$sight_distance) 
+stockholm_data$sight_distance <- as.numeric(stockholm_data$sight_distance)
+
+stockholm_data$guestreviewsrating <- gsub(" /5", "", stockholm_data$guestreviewsrating) 
+stockholm_data$guestreviewsrating <- as.numeric(stockholm_data$guestreviewsrating)
+
+stockholm_data$offer_cat <- gsub(" offer| no offer", "", stockholm_data$offer_cat) 
+
+str(stockholm_data)
+
+stockholm_data$hotel_id <- as.factor(stockholm_data$hotel_id)
+```
+
+<br>
+
+### Ellenőriztem, hogy vannak-e az adattáblában hiányzó adatok, és ha igen hol.
+
+
+### "is.na" paranccsal megnézem, hogy mely adatok hiányosak, viszont nem szeretném, hogy mind a 4333 megfigyelést egyesével leírja nekem, így az "any" paranccsal csak azt tudom meg hogy van-e hiányzó adat vagy sem. "TRUE" esetén van hiányzó adat, "FALSE" esetén minden adatunk megvan. 
+
+<br>
+
+```{r}
+
+any(is.na(stockholm_data))
+
+#Mivel "TRUE" értéket kaptam, ezért van hiányzó adat az adattáblában. A "colSums" paranccsal összegyűjtöm melyik oszlopban vannak hiányzó adatok és mennyi.
+
+colSums(is.na(stockholm_data))
+
+```
+
+<br>
+
+### Mivel a hiányzó adatok nem árral és távolsággal kapcsolatosak, emiatt nem befolyásolja a kesőbbi adatvizsgálatomat, így nem helyettesítem/törlöm ki őket.
+
+<br>
+
+## 1.lépés - Árak és távolságok eloszlása a Stockholm-i hotelek fókuszában
+
+### Megvizsgálom, hogy az éjszakák hány napra szólnak és az alapján szétbontom több változóra, hogy majd az ábrák létrehozásánál csak azokat az adatokat tudjam vizsgálni, ahol az ár egy éjszakára szól. 
+
+<br>
+
+```{r}
+
+hotel_stockholm <- stockholm_data %>% filter(accommodationtype=="Hotel")
+
+hotel_stockholm <- hotel_stockholm %>% filter(price_night == 1)
+
+```
+<br>
+
+
+### Létrehozok egy hisztogramot az alapján, hogy milyen ár gyakorisággal szerepelnek hotelek, amelyeknek 1 éjszakára szól az ajánlatuk Stockholm-ban.
+
+<br>
+
+```{r}
+table(hotel_stockholm$price)
+
+hotel_stockholm %>% 
+  filter(price<=500) %>% 
+  ggplot(aes(x = price)) +
+  geom_histogram(binwidth = 20, color="#1c3e5d", fill = "#4b8cc8", alpha = 0.7) +
+  labs(title = "Stockholm-i hotelek árainak eloszlása", x = "Ár/éjszaka", y = "Gyakoriság") +
+  theme_clean() +
+  theme(text = element_text(family = "Arial"))
+```
+
+### Annak érdekében, hogy az ábra könnyebben érthető legyen a szélső értékeket nem prezentáltam a hisztogrammon. Emiatt az 500 EUR-nál drágább hotelek nem jelennek meg az ábrán (4 db megfigyelés lett kizárva a szélsőséges értékekkel való szűkítés miatt).
+
+<br>
+
+### A Hisztogramhoz egy sűrűséggörbét is csatolok.
+
+<br>
+
+```{r}
+hotel_stockholm %>% 
+  filter(price<=500) %>% 
+  ggplot(aes(x = price)) +
+  geom_histogram(aes(y = ..density..), binwidth = 20, color="#1c3e5d", fill = "#4b8cc8", alpha = 0.7) +
+  geom_density(color = "#bf57f7", size = 1) +
+  labs(title = "Stockholm-i hotelek árainak eloszlása", x = "Ár/éjszaka", y = "Gyakoriság") +
+  theme_clean() +
+  theme(text = element_text(family = "Arial"))
+```
+
+<br>
+
+A hisztogramról leolvasható, hogy gyengén jobbra elnyúló asszimmetrikus eloszlása van a Stockholm-i hotelek 1 éjszakára vonatkozó árainak gyakoriságának. Ez annyit jelent, hogy a legtöbb hotelnek, egy szobájának, Stockholmban 1 éjszakára 100 és 200 EUR közötti ára van.
+
+
+<br>
+
+### Létrehozok egy másik hisztogramot az alapján, hogy milyen távolság gyakorisággal szerepelnek hotelek, amelyeknek 1 éjszakára szól az ajánlatuk Stockholm-ban.
+
+<br>
+
+```{r}
+ggplot(hotel_stockholm, aes(x = citycenter_distance)) +
+  geom_histogram(binwidth = 0.2, fill = "#4b8cc8", color = "#1c3e5d", alpha = 0.7) +
+  labs(title = "A Stockholm-i hotelek városközponttól való távolságok eloszlása", x = "Távolság (km)", y = "Gyakoriság") +
+  theme_clean()+
+  theme(text = element_text(family = "Arial"))
+```
+
+<br>
+
+### A Hisztogramhoz egy sűrűséggörbét is csatolok.
+
+<br>
+
+```{r}
+ggplot(hotel_stockholm, aes(x = citycenter_distance)) +
+  geom_histogram(aes(y = ..density..), binwidth = 0.2, fill = "#4b8cc8", color = "#1c3e5d", alpha = 0.7) +
+  geom_density(color = "#bf57f7", size = 1) +
+  labs(title = "A Stockholm-i hotelek városközponttól való távolságának eloszlása", x = "Távolság (km)", y = "Gyakoriság") +
+  theme_clean()+
+  theme(text = element_text(family = "Arial"))
+```
+<br>
+
+### A hisztogramról leolvasható, hogy erősen jobbra elnyúló asszimmetrikus eloszlása van a Stockholm-i hotelek városközponttól való távolságának gyakoriságának. Ez annyit jelent, hogy a legtöbb hotel Stockholm városközpontjának 1 km-s körzetében található.
+
+<br> 
+
+
+## 2.lépés - Leíró statisztikák
+
+```{r}
+summary(hotel_stockholm$price)
+summary(hotel_stockholm$citycenter_distance)
+
+var(hotel_stockholm$price)
+sd(hotel_stockholm$price)
+
+
+```
+
+<br>
+
+## 3.0.lépés - a Bécsi adatok előkészítése a későbbi összehasonlításhoz, a Stockholmi hotelek adatainak előkészítéséhez hasonlóan
+
+<br>
+```{r}
+vienna_data <- hotels_data %>% 
+  filter(city_actual == "Vienna")
+
+print(unique(vienna_data$price_night))
+
+vienna_data %>%
+  filter(price_night == "price for 1 night") %>%
+  count()
+
+vienna_data %>%
+  filter(price_night == "price for 4 nights") %>%
+  count()
+
+vienna_data$price_night <- recode(vienna_data$price_night,
+                                 "price for 1 night" = "1",
+                                 "price for 4 nights" = "4",)
+
+vienna_data$price_night <- as.numeric(vienna_data$price_night)
+
+vienna_data <- vienna_data %>% filter(price_night == 1)
+
+vienna_data <- vienna_data %>% 
+  rename(citycenter_distance = center1distance) %>% 
+  rename(sightname = center2label) %>% 
+  rename(sight_distance = center2distance)
+
+identical(vienna_data$city_actual, vienna_data$s_city)
+
+vienna_data <- vienna_data %>% 
+  select(addresscountryname, city_actual, neighbourhood, hotel_id, price, price_night, accommodationtype, citycenter_distance, sightname, sight_distance, offer, starrating, guestreviewsrating, rating_reviewcount, rating2_ta, rating2_ta_reviewcount, scarce_room, offer, offer_cat, year, month, weekend, holiday)
+
+
+vienna_data$accommodationtype <- recode(vienna_data$accommodationtype, 
+                                  "_ACCOM_TYPE@Hotel" = "Hotel",
+                                 "_ACCOM_TYPE@Apart-hotel" = "Apart-hotel",
+                                 "_ACCOM_TYPE@Guest House" = "Guest House",
+                                 "_ACCOM_TYPE@Bed and breakfast"   = "Bed and breakfast",
+                                 "_ACCOM_TYPE@House boat"  = "House boat",
+                                 "_ACCOM_TYPE@Hostel" = "Hostel",
+                                 "_ACCOM_TYPE@Apartment" = "Apartment",)
+
+vienna_data$citycenter_distance <- gsub(" miles| mile", "", vienna_data$citycenter_distance) 
+vienna_data$citycenter_distance <- as.numeric(vienna_data$citycenter_distance)
+
+vienna_data$sight_distance <- gsub(" miles| mile", "", vienna_data$sight_distance) 
+vienna_data$sight_distance <- as.numeric(vienna_data$sight_distance)
+
+vienna_data$guestreviewsrating <- gsub(" /5", "", vienna_data$guestreviewsrating) 
+vienna_data$guestreviewsrating <- as.numeric(vienna_data$guestreviewsrating)
+
+vienna_data$offer_cat <- gsub(" offer| no offer", "", vienna_data$offer_cat) 
+
+vienna_data$hotel_id <- as.factor(vienna_data$hotel_id)
+
+any(is.na(vienna_data))
+
+colSums(is.na(vienna_data))
+
+vienna_data <- vienna_data %>% filter(accommodationtype=="Hotel")
+```
+
+<br>
+
+## 3.1.lépés - a releváns ábrák elkészítése a Bécsi hotelek adatait felhasználva
+
+### Létrehozok egy hisztogramot az alapján, hogy milyen ár gyakorisággal szerepelnek hotelek, amelyeknek 1 éjszakára szól az ajánlatuk Bécsben és az ábrára sűrűséggörbét is teszek.
+
+<br>
+
+```{r}
+vienna_data %>% 
+  filter(price<=650) %>% 
+  ggplot(aes(x = price)) +
+  geom_histogram(aes(y = ..density..), binwidth = 20, color="#a34700", fill = "#f58631", alpha = 0.7) +
+  geom_density(color = "#37a626", size = 1) +
+  labs(title = "Bécsi hotelek árainak eloszlása", x = "Ár/éjszaka", y = "Gyakoriság") +
+  theme_clean() +
+  theme(text = element_text(family = "Arial"))
+```
+
+<br>
+
+###  A hisztogramról leolvasható, hogy jobbra elnyúló asszimmetrikus eloszlása van a bécsi hotelek 1 éjszakára vonatkozó árainak gyakoriságának. Ez annyit jelent, hogy a legtöbb hotelnek, egy szobájának, Stockholmban 1 éjszakára 33 és 200 EUR közötti ára van.
+
+<br>
+
+### Annak érdekében, hogy az ábra könnyebben érthető legyen a szélső értékeket nem prezentáltam a hisztogrammon. Emiatt az 650 EUR-nál drágább hotelek nem jelennek meg az ábrán (12 db megfigyelés lett kizárva a szélsőséges értékekkel való szűkítés miatt).
+
+
+<br>
+
+### Létrehozok egy másik hisztogramot az alapján, hogy milyen távolság gyakorisággal szerepelnek hotelek, amelyeknek 1 éjszakára szól az ajánlatuk Bécsben és az ehhez tartozó sűrűséggörbét is ábrázolom.
+
+<br>
+
+```{r}
+vienna_data %>% 
+  filter(citycenter_distance <= 6) %>% 
+  ggplot(aes(x = citycenter_distance)) +
+  geom_histogram(aes(y = ..density..), binwidth = 0.2, fill = "#f58631", color = "#a34700", alpha = 0.7) +
+  geom_density(color = "#37a626", size = 1) +
+  labs(title = "A Bécsi hotelek városközponttól való távolságok eloszlása", x = "Távolság (km)", y = "Gyakoriság") +
+  theme_clean()+
+  theme(text = element_text(family = "Arial"))
+```
+
+<br> 
+
+### A hisztogramról leolvasható, hogy jobbra elnyúló asszimmetrikus eloszlása van a bécsi hotelek városközponttól való távolságának gyakoriságának. Ez annyit jelent, hogy a legtöbb hotel Stockholm városközpontjának 2 km-s körzetében található. Viszont elnyúlóan egészen 6 és 7 km-s körzetében is vannak hotelek, viszont ezek kis részét teszik ki a relatív gyakoriságnak.
+
+<br> 
+
+## 3.2.lépés - Leíró statisztikák
+
+```{r}
+summary(vienna_data$price)
+summary(vienna_data$citycenter_distance)
+
+var(vienna_data$price)
+sd(vienna_data$price)
+
+```
+<br>
+
+## 4.lépés -Szélső értékek
+
+### Az adattisztítás és adatelemzés folyamata alatt az alábbi ábrák esetében észleltem szélsőséges értékeket,:
+
+- Stockholm-i hotelek ár gyakorisága (500 EUR-nál húztam meg a határt az ábrázolás esetén)
+- Bécsi hotelek ár gyakorisága (650 EUR-nál húztam meg a határt az ábrázolás esetén)
+- Bécsi hotelek (6 km-nél húztam meg a határt az ábrázolás esetén)
+
+### Fontos megjegyezni, hogy egyik esetben sem vettem ki az adattábláimból ezeket a szélsőséges értékeket, csakis az ábrák könnyebb megértése miatt szűrtem ki az aktuális ábrakészítésnél.
+
+### Mivel nem gondolom, hogy ezek az adatok hibásak lennének, így nem törlöm a szélső értékeknek vélt adatokat. Viszont, hogy az ábrák intuitívabbak legyenek, ezért exkludálom őket az adatábrázolás folyamtakor.
+
+<br>
+
+## 5.lépés - a Stockholm-i hotelekkel kapcsolatos értékek összehasonlítása a Bécsi hotelekkel kapcsolatos értékekkel
+<br>
+
+### 5.1. A Stockholm-i és Bécsi adatok kombinálása és az adatok összehasonlítása egy közös hisztogrammon.
+
+<br>
+
+### Létrehozok egy  hisztogramot az alapján, hogy milyen ár gyakorisággal szerepelnek hotelek, amelyeknek 1 éjszakára szól az ajánlatuk Stockholm-ban és Bécsben.
+
+<br>
+
+```{r}
+combined_hotel <- rbind(hotel_stockholm, vienna_data)
+
+combined_hotel %>% 
+  filter(price<=600) %>%
+  ggplot (aes(x = price, fill = city_actual, color = city_actual)) +
+  geom_histogram(position = "dodge", binwidth = 30, alpha = 0.7) +
+  labs(title = "Stockholm-i és Bécsi hotelek árainak gyakoriságának összehasonlítása", 
+       x = "Ár", 
+       y = "Gyakoriság",
+       fill = "Városok") +
+  scale_fill_manual(values = c("#4b8cc8", "#f58631")) +
+  scale_color_manual(values = c("#1c3e5d", "#a34700")) +
+  guides(color = "none") +
+  theme_minimal() +
+  theme(text = element_text(family = "Arial"))
+
+```
+
+<br>
+
+### Létrehozok egy másik hisztogramot az alapján, hogy milyen távolság gyakorisággal szerepelnek hotelek, amelyeknek 1 éjszakára szól az ajánlatuk Stockholm-ban és Bécsben.
+
+<br>
+
+```{r}
+  combined_hotel %>% 
+  filter( citycenter_distance <= 5) %>% 
+  ggplot (aes(x = citycenter_distance, fill = city_actual, color = city_actual)) +
+  geom_histogram(position = "dodge", binwidth = 0.2, alpha = 0.7) +
+  labs(title = "Stockholm-i és Bécsi hotelek távolságának gyakoriságának összehasonlítása", 
+       x = "Távolság (km)", 
+       y = "Gyakoriság",
+       fill = "Városok") +
+  scale_fill_manual(values = c("#4b8cc8", "#f58631")) +
+  scale_color_manual(values = c("#1c3e5d", "#a34700")) +
+  guides(color = "none") +
+  theme_minimal() +
+  theme(text = element_text(family = "Arial"))
+```
+<br>
+
+### 5.2. Leíró statisztikák összehasonlítása
+
+<br>
+
+```{r}
+
+#Stockholm:
+summary(hotel_stockholm$price)
+summary(hotel_stockholm$citycenter_distance)
+
+var(hotel_stockholm$price)
+sd(hotel_stockholm$price)
+
+#Bécs:
+summary(vienna_data$price)
+summary(vienna_data$citycenter_distance)
+
+var(vienna_data$price)
+sd(vienna_data$price)
+```
+### Összefoglalva a logikai változókat, azt lehet megállapítani, hogy a Stockholm-ban található hotelek drágábbak, de közelebb találhatóak a városközponthoz, míg a Bécsben található hotelek olcsóbbak, de jellemzően távolabb helyezkednek el a központtól. 
+
+### Az átlagár Stockholm-i hotelek esetében 178.5 EUR/éjszaka, míg Bécsiekében 145.2 EUR/éjszaka. És a Stockholmi hotelek átlagos távolsága  0.7832 km, ezzel szemben a bécsi hotelek átlagos távolsága átlagosan 1.441 km.
+
+### Az is kiderül az adatokból, hogy Stockholmban a hotelek jóval közelebb helyezkednek el a városközponthoz átlagosan, mint Bécsben. Ennek egyik oka lehet, hogy Bécs alapterülete 414,6 km^2, míg Stockholm-é 188 km^2. 

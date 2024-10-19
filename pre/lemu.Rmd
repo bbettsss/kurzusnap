@@ -1,0 +1,36 @@
+---
+title: "lemu"
+author: "betts"
+date: "2024-09-17"
+output: html_document
+---
+
+
+```{r}
+#ctrl + option i -> chunk 
+
+```
+
+```{r}
+setwd("~/Documents/Documents - betts’s MacBook Air/rajk/kurzusok/2.félév/ökonometria")
+
+adatok <- read.csv("titanic.csv")
+
+install.packages("readxl")
+library(readxl)
+
+haztartas <- read_excel("haztartas.xlsx")
+
+library("dplyr")
+
+adatok_uj <- adatok %>%
+  rename(nev = Name) %>% 
+  rename(nem = Sex)
+
+adatok_uj <-  adatok_uj %>% 
+  select(-Cabin, -Ticket)
+
+haztartas_uj <-  haztartas %>% 
+  mutate(jovedelem = JovEFt * 1000)
+```
+

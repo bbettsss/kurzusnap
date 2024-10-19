@@ -1,0 +1,125 @@
+all : mean mental well-being score (WHO-5);;;;
+Young people were asked how often over the last two weeks they had: felt cheerful and in good spirits;;;;
+Country;Survey_year;Age_group;Girl;Boy
+Albania;2022;11-year-olds;77;80
+North Macedonia;2022;11-year-olds;77;79
+Armenia;2022;11-year-olds;76;77
+Kyrgyztan;2022;11-year-olds;74;78
+Kazakhstan;2022;11-year-olds;73;77
+Croatia;2022;11-year-olds;70;76
+Greenland;2022;11-year-olds;72;74
+Greece;2022;11-year-olds;69;75
+Portugal;2022;11-year-olds;68;75
+Cyprus;2022;11-year-olds;70;73
+Republic of Moldova;2022;11-year-olds;70;71
+Netherlands;2022;11-year-olds;65;73
+Romania;2022;11-year-olds;66;72
+Belgium (Flemish);2022;11-year-olds;65;72
+Ireland;2022;11-year-olds;66;70
+Austria;2022;11-year-olds;65;70
+Spain;2022;11-year-olds;63;71
+Hungary;2022;11-year-olds;64;70
+Sweden;2022;11-year-olds;62;70
+Malta;2022;11-year-olds;62;71
+Latvia;2022;11-year-olds;63;69
+Luxembourg;2022;11-year-olds;63;69
+Switzerland;2022;11-year-olds;63;68
+Norway;2022;11-year-olds;62;69
+Belgium (French);2022;11-year-olds;63;69
+Canada;2022;11-year-olds;61;70
+Slovakia;2022;11-year-olds;62;68
+Germany;2022;11-year-olds;63;67
+Wales;2022;11-year-olds;62;68
+Lithuania;2022;11-year-olds;61;69
+Scotland;2022;11-year-olds;62;68
+Estonia;2022;11-year-olds;62;67
+Finland;2022;11-year-olds;61;68
+Iceland;2022;11-year-olds;62;66
+France;2022;11-year-olds;60;66
+Slovenia;2022;11-year-olds;59;65
+Italy;2022;11-year-olds;57;67
+Czechia;2022;11-year-olds;57;64
+Poland;2022;11-year-olds;54;63
+England;2022;11-year-olds;52;64
+Kazakhstan;2022;13-year-olds;68;76
+Albania;2022;13-year-olds;67;77
+Kyrgyztan;2022;13-year-olds;68;75
+Armenia;2022;13-year-olds;67;75
+North Macedonia;2022;13-year-olds;66;74
+Greenland;2022;13-year-olds;63;70
+Republic of Moldova;2022;13-year-olds;61;69
+Croatia;2022;13-year-olds;57;70
+Denmark;2022;13-year-olds;58;69
+Norway;2022;13-year-olds;57;68
+Portugal;2022;13-year-olds;55;69
+Belgium (Flemish);2022;13-year-olds;55;68
+Finland;2022;13-year-olds;54;67
+Cyprus;2022;13-year-olds;54;67
+Iceland;2022;13-year-olds;56;65
+Sweden;2022;13-year-olds;53;68
+Netherlands;2022;13-year-olds;54;66
+Ireland;2022;13-year-olds;55;64
+Latvia;2022;13-year-olds;52;66
+Canada;2022;13-year-olds;52;66
+Romania;2022;13-year-olds;52;65
+Malta;2022;13-year-olds;52;65
+Lithuania;2022;13-year-olds;51;66
+Spain;2022;13-year-olds;51;65
+Wales;2022;13-year-olds;53;63
+Greece;2022;13-year-olds;49;66
+Austria;2022;13-year-olds;52;63
+Belgium (French);2022;13-year-olds;51;63
+Switzerland;2022;13-year-olds;51;63
+Luxembourg;2022;13-year-olds;50;64
+Slovakia;2022;13-year-olds;51;63
+Germany;2022;13-year-olds;51;62
+Scotland;2022;13-year-olds;50;63
+Hungary;2022;13-year-olds;50;62
+Estonia;2022;13-year-olds;49;62
+Italy;2022;13-year-olds;47;63
+France;2022;13-year-olds;49;59
+Czechia;2022;13-year-olds;47;59
+England;2022;13-year-olds;44;60
+Slovenia;2022;13-year-olds;44;58
+Poland;2022;13-year-olds;44;57
+Kazakhstan;2022;15-year-olds;63;73
+Greenland;2022;15-year-olds;65;69
+Armenia;2022;15-year-olds;62;70
+Kyrgyztan;2022;15-year-olds;61;72
+Albania;2022;15-year-olds;60;72
+North Macedonia;2022;15-year-olds;57;71
+Republic of Moldova;2022;15-year-olds;57;67
+Denmark;2022;15-year-olds;57;67
+Croatia;2022;15-year-olds;52;68
+Iceland;2022;15-year-olds;53;66
+Finland;2022;15-year-olds;52;66
+Norway;2022;15-year-olds;53;64
+Netherlands;2022;15-year-olds;50;64
+Sweden;2022;15-year-olds;49;64
+Belgium (Flemish);2022;15-year-olds;49;64
+Portugal;2022;15-year-olds;49;63
+Romania;2022;15-year-olds;49;62
+Lithuania;2022;15-year-olds;48;63
+Slovakia;2022;15-year-olds;48;62
+Cyprus;2022;15-year-olds;48;62
+Luxembourg;2022;15-year-olds;48;61
+Switzerland;2022;15-year-olds;48;61
+Latvia;2022;15-year-olds;47;61
+Spain;2022;15-year-olds;47;61
+Belgium (French);2022;15-year-olds;48;59
+Canada;2022;15-year-olds;48;59
+Scotland;2022;15-year-olds;47;59
+Hungary;2022;15-year-olds;46;60
+Greece;2022;15-year-olds;44;61
+Wales;2022;15-year-olds;47;58
+Germany;2022;15-year-olds;47;58
+France;2022;15-year-olds;46;59
+Czechia;2022;15-year-olds;46;59
+Ireland;2022;15-year-olds;46;57
+Austria;2022;15-year-olds;45;59
+Malta;2022;15-year-olds;44;58
+Estonia;2022;15-year-olds;43;56
+England;2022;15-year-olds;39;57
+Italy;2022;15-year-olds;40;56
+Slovenia;2022;15-year-olds;40;54
+Poland;2022;15-year-olds;40;54
